@@ -14,7 +14,7 @@
    <string>swdeImport</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="resources.qrc">
+   <iconset resource="../../swdeImport/swdeImport/resources.qrc">
     <normaloff>:/plugins/swdeimport/swde-plug-import-22b.png</normaloff>:/plugins/swdeimport/swde-plug-import-22b.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -25,7 +25,7 @@
      </property>
      <widget class="QWidget" name="tabSettings">
       <attribute name="icon">
-       <iconset resource="resources.qrc">
+       <iconset resource="../../swdeImport/swdeImport/resources.qrc">
         <normaloff>:/plugins/swdeimport/preferences-other.png</normaloff>:/plugins/swdeimport/preferences-other.png</iconset>
       </attribute>
       <attribute name="title">
@@ -648,7 +648,7 @@
      </widget>
      <widget class="QWidget" name="tabImport">
       <attribute name="icon">
-       <iconset resource="resources.qrc">
+       <iconset resource="../../swdeImport/swdeImport/resources.qrc">
         <normaloff>:/plugins/swdeimport/system-run.png</normaloff>:/plugins/swdeimport/system-run.png</iconset>
       </attribute>
       <attribute name="title">
@@ -675,7 +675,7 @@
               <string>...</string>
              </property>
              <property name="icon">
-              <iconset resource="resources.qrc">
+              <iconset resource="../../swdeImport/swdeImport/resources.qrc">
                <normaloff>:/plugins/swdeimport/document-open.png</normaloff>:/plugins/swdeimport/document-open.png</iconset>
              </property>
             </widget>
@@ -928,7 +928,7 @@
      </widget>
      <widget class="QWidget" name="tabSDEInfo">
       <attribute name="icon">
-       <iconset resource="resources.qrc">
+       <iconset resource="../../swdeImport/swdeImport/resources.qrc">
         <normaloff>:/plugins/swdeimport/documentation.png</normaloff>:/plugins/swdeimport/documentation.png</iconset>
       </attribute>
       <attribute name="title">
@@ -1055,7 +1055,7 @@
           <string>Zamknij</string>
          </property>
          <property name="icon">
-          <iconset resource="resources.qrc">
+          <iconset resource="../../swdeImport/swdeImport/resources.qrc">
            <normaloff>:/plugins/swdeimport/application-exit.png</normaloff>:/plugins/swdeimport/application-exit.png</iconset>
          </property>
         </widget>
@@ -1068,7 +1068,7 @@
  </widget>
  <resources>
   <include location="../../swdeDzeInfo/resources.qrc"/>
-  <include location="resources.qrc"/>
+  <include location="../../swdeImport/swdeImport/resources.qrc"/>
  </resources>
  <connections>
   <connection>

@@ -28,8 +28,8 @@ import resources_rc
 # Import the code for the dialog
 from swdedzeinfodialog import swdeDzeInfoDialog
 
-from rob_db_connection import RobDBBase
-from rob_db_connection import RobDBTable
+from swdeImport.rob_db_connection import RobDBBase
+from swdeImport.rob_db_connection import RobDBTable
 
 class swdeDzeInfo:
 
