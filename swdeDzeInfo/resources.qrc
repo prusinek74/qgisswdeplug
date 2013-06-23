@@ -1,0 +1,15 @@
+<RCC>
+  <qresource prefix="/plugins/swdedzeinfo">
+    <file>document-print.png</file>
+    <file>icon.png</file>
+    <file>swde-plug-info-32b.png</file>
+    <file>swde-plug-info-22b.png</file>
+    <file>swde-plug-info-16b.png</file>
+    <file>exit.png</file>
+    <file>gtk-save.png</file>
+    <file>application-exit.png</file>
+    <file>swde-plug-import-22a.png</file>
+    <file>swde-plug-import-16a.png</file>
+    <file>swde-plug-import-32a.png</file>
+  </qresource>
+</RCC>

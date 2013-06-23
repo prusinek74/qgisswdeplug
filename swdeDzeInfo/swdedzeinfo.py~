@@ -1,0 +1,97 @@
+# -*- coding: utf-8 -*-
+"""
+/***************************************************************************
+ swdeDzeInfo
+                                 A QGIS plugin
+ Wyświetla okno z informacją o wybranej działce ewidencyjnej z tabeli g5dze postgresowej bazy danych z zaimportowanymi danymi z plików swde
+                              -------------------
+        begin                : 2013-05-26
+        copyright            : (C) 2013 by Robert Dorna - robbur
+        email                : robert.dorna@wp.eu
+ ***************************************************************************/
+
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+"""
+# Import the PyQt and QGIS libraries
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
+from qgis.core import *
+# Initialize Qt resources from file resources.py
+import resources_rc
+# Import the code for the dialog
+from swdedzeinfodialog import swdeDzeInfoDialog
+
+
+class swdeDzeInfo:
+
+    def __init__(self, iface):
+        # Save reference to the QGIS interface
+        self.iface = iface
+        # initialize plugin directory
+        self.plugin_dir = QFileInfo(QgsApplication.qgisUserDbFilePath()).path() + "/python/plugins/swdedzeinfo"
+        # initialize locale
+        localePath = ""
+        locale = QSettings().value("locale/userLocale").toString()[0:2]
+
+        if QFileInfo(self.plugin_dir).exists():
+            localePath = self.plugin_dir + "/i18n/swdedzeinfo_" + locale + ".qm"
+
+        if QFileInfo(localePath).exists():
+            self.translator = QTranslator()
+            self.translator.load(localePath)
+
+            if qVersion() > '4.3.3':
+                QCoreApplication.installTranslator(self.translator)
+
+        # Create the dialog (after translation) and keep reference
+        self.dlg = swdeDzeInfoDialog()
+        self.rdbase = RobDBBase('localhost', 'swdegis', 'biuro', 'melioracja', 1)
+
+    def initGui(self):
+        # Create action that will start plugin configuration
+        self.action = QAction(
+            QIcon(":/plugins/swdedzeinfo/icon.png"),
+            u"Informacje o działce ewidencyjnej", self.iface.mainWindow())
+        # connect the action to the run method
+        QObject.connect(self.action, SIGNAL("triggered()"), self.run)
+
+        # Add toolbar button and menu item
+        self.iface.addToolBarIcon(self.action)
+        self.iface.addPluginToMenu(u"&swde_dze_info", self.action)
+        QObject.connect(self.dlg.ui.pbtnSave,SIGNAL("clicked()"),self.pbtnSaveClicked)
+
+    def unload(self):
+        # Remove the plugin menu item and icon
+        self.iface.removePluginMenu(u"&swde_dze_info", self.action)
+        self.iface.removeToolBarIcon(self.action)
+
+    # run method that performs all the real work
+    def run(self):
+        # show the dialog
+        self.dlg.show()
+        # Run the dialog event loop
+        result = self.dlg.exec_()
+        # See if OK was pressed
+        if result == 1:
+            # do something useful (delete the line containing pass and
+            # substitute with your code)
+            pass
+
+    def pbtnSaveClicked(self):
+        filename = QFileDialog.getSaveFileName(self.dlg, 'Save File', '.')
+        fname = open(filename + '.html', 'w')
+        fname.write(self.dlg.ui.txtFeedback.toHtml())#textEdit.toPlainText())
+        fname.close() 
+
+    def dzeInfo(self):
+        txt = ""
+        cols = ['g5idd', 'nr', 'id_zd', 'g5idr', 'g5nos', 'g5wrt', 'g5dwr', 'g5pew', 'g5rzn', 'g5dww', 'g5radr', 'g5rpwl', 'g5rpwd', 'g5rjdr', 'g5dtw', 'g5dtu', 'g5rkrg', 'g5id2', 'g5id1', 'nrobr', 'tab_uid']
+        g5dzeT = RobDBTable(self.rdbase, 'g5dze', cols, 1, 1)
+        return txt

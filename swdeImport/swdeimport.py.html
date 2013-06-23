@@ -1,0 +1,823 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>~/projekty/qgis-plugin/swdeImport/swdeImport/swdeimport.py.html</title>
+<meta name="Generator" content="Vim/7.3">
+<meta name="plugin-version" content="vim7.3_v10">
+<meta name="syntax" content="python">
+<meta name="settings" content="number_lines,use_css,pre_wrap,expand_tabs">
+<style type="text/css">
+<!--
+pre { white-space: pre-wrap; font-family: monospace; color: #e2e2e5; background-color: #202020; }
+body { font-family: monospace; color: #e2e2e5; background-color: #202020; }
+.lnr { color: #808080; background-color: #000000; }
+.Todo { color: #000000; background-color: #e6ea50; font-style: italic; }
+.Type { color: #7e8aa2; }
+.Error { color: #ffffff; background-color: #ff0000; }
+.Special { color: #ff9800; }
+.pythonOperator { color: #7e8aa2; }
+.Number { color: #ff9800; }
+.Function { color: #ffffff; font-weight: bold; }
+.Statement { color: #7e8aa2; }
+.PreProc { color: #faf4c6; }
+.String { color: #b1d631; font-style: italic; }
+.Comment { color: #808080; font-style: italic; }
+-->
+</style>
+</head>
+<body>
+<pre>
+<span class="lnr">  1 </span><span class="Comment"># -*- coding: utf-8 -*-</span>
+<span class="lnr">  2 </span><span class="String">&quot;&quot;&quot;</span>
+<span class="lnr">  3 </span><span class="String">/***************************************************************************</span>
+<span class="lnr">  4 </span><span class="String"> swdeImport</span>
+<span class="lnr">  5 </span><span class="String">                                 A QGIS plugin</span>
+<span class="lnr">  6 </span><span class="String"> wtyczka umożliwa import danych z plików swde do bazy postgis</span>
+<span class="lnr">  7 </span><span class="String">                              -------------------</span>
+<span class="lnr">  8 </span><span class="String">        begin                : 2013-05-26</span>
+<span class="lnr">  9 </span><span class="String">        copyright            : (C) 2013 by Robert Dorna - robbur</span>
+<span class="lnr"> 10 </span><span class="String">        email                : robert.dorna@wp.eu</span>
+<span class="lnr"> 11 </span><span class="String"> ***************************************************************************/</span>
+<span class="lnr"> 12 </span>
+<span class="lnr"> 13 </span><span class="String">/***************************************************************************</span>
+<span class="lnr"> 14 </span><span class="String"> *                                                                         *</span>
+<span class="lnr"> 15 </span><span class="String"> *   This program is free software; you can redistribute it and/or modify  *</span>
+<span class="lnr"> 16 </span><span class="String"> *   it under the terms of the GNU General Public License as published by  *</span>
+<span class="lnr"> 17 </span><span class="String"> *   the Free Software Foundation; either version 2 of the License, or     *</span>
+<span class="lnr"> 18 </span><span class="String"> *   (at your option) any later version.                                   *</span>
+<span class="lnr"> 19 </span><span class="String"> *                                                                         *</span>
+<span class="lnr"> 20 </span><span class="String"> ***************************************************************************/</span>
+<span class="lnr"> 21 </span><span class="String">&quot;&quot;&quot;</span>
+<span class="lnr"> 22 </span><span class="Comment"># Import the PyQt and QGIS libraries</span>
+<span class="lnr"> 23 </span><span class="PreProc">from</span> PyQt4.QtCore <span class="PreProc">import</span> *
+<span class="lnr"> 24 </span><span class="PreProc">from</span> PyQt4.QtGui <span class="PreProc">import</span> *
+<span class="lnr"> 25 </span><span class="PreProc">from</span> qgis.core <span class="PreProc">import</span> *
+<span class="lnr"> 26 </span><span class="Comment"># Initialize Qt resources from file resources.py</span>
+<span class="lnr"> 27 </span><span class="PreProc">import</span> resources_rc
+<span class="lnr"> 28 </span><span class="Comment"># Import the code for the dialog</span>
+<span class="lnr"> 29 </span><span class="PreProc">from</span> swdeimportdialog <span class="PreProc">import</span> swdeImportDialog
+<span class="lnr"> 30 </span>
+<span class="lnr"> 31 </span><span class="PreProc">from</span> rob_db_connection <span class="PreProc">import</span> RobDBBase
+<span class="lnr"> 32 </span><span class="PreProc">from</span> rob_db_connection <span class="PreProc">import</span> RobDBTable
+<span class="lnr"> 33 </span><span class="PreProc">from</span> datetime <span class="PreProc">import</span> datetime
+<span class="lnr"> 34 </span><span class="PreProc">import</span> time
+<span class="lnr"> 35 </span><span class="PreProc">import</span> unicodedata
+<span class="lnr"> 36 </span><span class="PreProc">import</span> pyproj
+<span class="lnr"> 37 </span><span class="PreProc">import</span> sys
+<span class="lnr"> 38 </span>
+<span class="lnr"> 39 </span><span class="Statement">class</span> <span class="Function">swdeImport</span>:
+<span class="lnr"> 40 </span>
+<span class="lnr"> 41 </span>    <span class="Statement">def</span> <span class="Function">__init__</span>(self, iface):
+<span class="lnr"> 42 </span>        <span class="Comment"># Save reference to the QGIS interface</span>
+<span class="lnr"> 43 </span>        self.iface = iface
+<span class="lnr"> 44 </span>        <span class="Comment"># initialize plugin directory</span>
+<span class="lnr"> 45 </span>        self.plugin_dir = QFileInfo(QgsApplication.qgisUserDbFilePath()).path() + <span class="String">&quot;python/plugins/swdeImport&quot;</span> <span class="Comment">#usunalem / na poczatku stringa</span>
+<span class="lnr"> 46 </span>        <span class="Comment"># initialize locale</span>
+<span class="lnr"> 47 </span>        localePath = <span class="String">&quot;&quot;</span>
+<span class="lnr"> 48 </span>        locale = QSettings().value(<span class="String">&quot;locale/userLocale&quot;</span>).toString()[<span class="Number">0</span>:<span class="Number">2</span>]
+<span class="lnr"> 49 </span>
+<span class="lnr"> 50 </span>        <span class="Statement">if</span> QFileInfo(self.plugin_dir).exists():
+<span class="lnr"> 51 </span>            localePath = self.plugin_dir + <span class="String">&quot;/i18n/swdeimport_&quot;</span> + locale + <span class="String">&quot;.qm&quot;</span>
+<span class="lnr"> 52 </span>
+<span class="lnr"> 53 </span>        <span class="Statement">if</span> QFileInfo(localePath).exists():
+<span class="lnr"> 54 </span>            self.translator = QTranslator()
+<span class="lnr"> 55 </span>            self.translator.load(localePath)
+<span class="lnr"> 56 </span>
+<span class="lnr"> 57 </span>            <span class="Statement">if</span> qVersion() &gt; <span class="String">'4.3.3'</span>:
+<span class="lnr"> 58 </span>                QCoreApplication.installTranslator(self.translator)
+<span class="lnr"> 59 </span>
+<span class="lnr"> 60 </span>        <span class="Comment"># Create the dialog (after translation) and keep reference</span>
+<span class="lnr"> 61 </span>        self.dlg = swdeImportDialog()
+<span class="lnr"> 62 </span>
+<span class="lnr"> 63 </span>        self.swde_file = <span class="String">&quot;&quot;</span>
+<span class="lnr"> 64 </span>        self.ilosc_linii = <span class="Number">0</span>
+<span class="lnr"> 65 </span>
+<span class="lnr"> 66 </span>    <span class="Statement">def</span> <span class="Function">initGui</span>(self):
+<span class="lnr"> 67 </span>        <span class="Comment"># Create action that will start plugin configuration</span>
+<span class="lnr"> 68 </span>        self.action = QAction(
+<span class="lnr"> 69 </span>            QIcon(<span class="String">&quot;:/plugins/swdeimport/icon.png&quot;</span>),
+<span class="lnr"> 70 </span>            <span class="String">u&quot;swde/swde_import&quot;</span>, self.iface.mainWindow())
+<span class="lnr"> 71 </span>        <span class="Comment"># connect the action to the run method</span>
+<span class="lnr"> 72 </span>        QObject.connect(self.action, SIGNAL(<span class="String">&quot;triggered()&quot;</span>), self.run)
+<span class="lnr"> 73 </span>
+<span class="lnr"> 74 </span>        <span class="Comment"># Add toolbar button and menu item</span>
+<span class="lnr"> 75 </span>        self.iface.addToolBarIcon(self.action)
+<span class="lnr"> 76 </span>        self.iface.addPluginToMenu(<span class="String">u&quot;&amp;swde_import&quot;</span>, self.action)
+<span class="lnr"> 77 </span>        self.connGuiSignals()<span class="Comment">#łączenie sygnałów z obiektami z GUI</span>
+<span class="lnr"> 78 </span>        <span class="Comment">#inicializacja tablicy items dla combobox z ukladami przestrzennymi</span>
+<span class="lnr"> 79 </span>        self.cmb_pyproj4_items = {}
+<span class="lnr"> 80 </span>        <span class="Statement">try</span>:
+<span class="lnr"> 81 </span>            pyproj4file = self.plugin_dir + <span class="String">u&quot;/pyproj4str&quot;</span>
+<span class="lnr"> 82 </span>            f = <span class="Function">open</span>(pyproj4file, <span class="String">&quot;r&quot;</span>)
+<span class="lnr"> 83 </span>            <span class="Statement">try</span>:
+<span class="lnr"> 84 </span>                second = <span class="Number">0</span>
+<span class="lnr"> 85 </span>                key = <span class="String">&quot;&quot;</span>
+<span class="lnr"> 86 </span>                value = <span class="String">&quot;&quot;</span>
+<span class="lnr"> 87 </span>                <span class="Statement">for</span> line <span class="pythonOperator">in</span> f.readlines():
+<span class="lnr"> 88 </span>                    line = line.rstrip(<span class="String">'</span><span class="Special">\n</span><span class="String">'</span>)
+<span class="lnr"> 89 </span>                    line = line.rstrip(<span class="String">'</span><span class="Special">\r</span><span class="String">'</span>)
+<span class="lnr"> 90 </span>                    <span class="Statement">if</span> second == <span class="Number">0</span>:
+<span class="lnr"> 91 </span>                        key = line
+<span class="lnr"> 92 </span>                        second = <span class="Number">1</span>
+<span class="lnr"> 93 </span>                    <span class="Statement">else</span>:
+<span class="lnr"> 94 </span>                        value = line
+<span class="lnr"> 95 </span>                        self.cmb_pyproj4_items [key] = value<span class="Error"> </span>
+<span class="lnr"> 96 </span>                        self.dlg.ui.cmbPyprojFrom.addItem(key, value)
+<span class="lnr"> 97 </span>                        self.dlg.ui.cmbPyprojTo.addItem(key, value)
+<span class="lnr"> 98 </span>                        second = <span class="Number">0</span>
+<span class="lnr"> 99 </span>
+<span class="lnr">100 </span>            <span class="Statement">finally</span>:
+<span class="lnr">101 </span>                f.close()
+<span class="lnr">102 </span>        <span class="Statement">except</span> <span class="Type">IOError</span>:
+<span class="lnr">103 </span>            self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;error: &quot;</span> + pyproj4file)
+<span class="lnr">104 </span>            <span class="Statement">pass</span>
+<span class="lnr">105 </span>
+<span class="lnr">106 </span>
+<span class="lnr">107 </span>    <span class="Statement">def</span> <span class="Function">unload</span>(self):
+<span class="lnr">108 </span>        <span class="Comment"># Remove the plugin menu item and icon</span>
+<span class="lnr">109 </span>        self.iface.removePluginMenu(<span class="String">u&quot;&amp;swde_import&quot;</span>, self.action)
+<span class="lnr">110 </span>        self.iface.removeToolBarIcon(self.action)
+<span class="lnr">111 </span>
+<span class="lnr">112 </span>    <span class="Comment"># run method that performs all the real work</span>
+<span class="lnr">113 </span>    <span class="Statement">def</span> <span class="Function">run</span>(self):
+<span class="lnr">114 </span>        <span class="Comment"># show the dialog</span>
+<span class="lnr">115 </span>        self.dlg.show()
+<span class="lnr">116 </span>        <span class="Comment"># Run the dialog event loop</span>
+<span class="lnr">117 </span>        result = self.dlg.exec_()
+<span class="lnr">118 </span>        <span class="Comment"># See if OK was pressed</span>
+<span class="lnr">119 </span>        <span class="Statement">if</span> result == <span class="Number">1</span>:
+<span class="lnr">120 </span>            <span class="Comment"># do something useful (delete the line containing pass and</span>
+<span class="lnr">121 </span>            <span class="Comment"># substitute with your code)</span>
+<span class="lnr">122 </span>            <span class="Statement">pass</span>
+<span class="lnr">123 </span>
+<span class="lnr">124 </span>    <span class="Statement">def</span> <span class="Function">connGuiSignals</span>(self):
+<span class="lnr">125 </span>        <span class="Comment">#========Zakładka import===========</span>
+<span class="lnr">126 </span>        <span class="Comment">#--------buttons</span>
+<span class="lnr">127 </span>        QObject.connect(self.dlg.ui.pbtnAnalizaWykonaj,SIGNAL(<span class="String">&quot;clicked()&quot;</span>),self.pbtnAnalizaWykonajClicked)
+<span class="lnr">128 </span>        QObject.connect(self.dlg.ui.tbtnWybierzSWDEFile,SIGNAL(<span class="String">&quot;clicked()&quot;</span>),self.tbtnWybierzSWDEFileClicked)
+<span class="lnr">129 </span>        QObject.connect(self.dlg.ui.pbtnSWDEHeaderInfo,SIGNAL(<span class="String">&quot;clicked()&quot;</span>),self.pbtnSWDEHeaderInfoClicked)
+<span class="lnr">130 </span>        QObject.connect(self.dlg.ui.pbtnSWDEHeaderFull,SIGNAL(<span class="String">&quot;clicked()&quot;</span>),self.pbtnSWDEHeaderFullClicked)
+<span class="lnr">131 </span>        QObject.connect(self.dlg.ui.pbtnImportuj,SIGNAL(<span class="String">&quot;clicked()&quot;</span>),self.pbtnImportujClicked)
+<span class="lnr">132 </span>
+<span class="lnr">133 </span>        <span class="Comment">#--------edits and labels</span>
+<span class="lnr">134 </span>
+<span class="lnr">135 </span>        <span class="Comment">#--------checkboxes and radiobuttons</span>
+<span class="lnr">136 </span>
+<span class="lnr">137 </span>
+<span class="lnr">138 </span>    <span class="Statement">def</span> <span class="Function">tbtnWybierzSWDEFileClicked</span>(self):
+<span class="lnr">139 </span>        self.swde_file = QFileDialog.getOpenFileName(self.dlg, <span class="String">'Wybierz plik SWDE'</span>, <span class="String">'.'</span>)
+<span class="lnr">140 </span>        self.dlg.ui.leditSWDEFile.setText(self.swde_file)
+<span class="lnr">141 </span>
+<span class="lnr">142 </span>    <span class="Statement">def</span> <span class="Function">pbtnAnalizaWykonajClicked</span>(self):
+<span class="lnr">143 </span>        self.swde_file = self.dlg.ui.leditSWDEFile.displayText()
+<span class="lnr">144 </span>        <span class="Statement">if</span> self.swde_file != <span class="String">''</span>:
+<span class="lnr">145 </span>            ilosc_linii = <span class="Number">0</span>
+<span class="lnr">146 </span>            step = <span class="Number">0</span>
+<span class="lnr">147 </span>            pgv = <span class="Number">0</span>
+<span class="lnr">148 </span>            id_jed_rej = <span class="String">&quot;&quot;</span>
+<span class="lnr">149 </span>            <span class="Statement">try</span>:
+<span class="lnr">150 </span>                f = <span class="Function">open</span>(<span class="Function">str</span>(self.swde_file.toUtf8()).decode(<span class="String">'utf-8'</span>), <span class="String">&quot;r&quot;</span>)
+<span class="lnr">151 </span>                <span class="Statement">try</span>:
+<span class="lnr">152 </span>                    <span class="Statement">for</span> line <span class="pythonOperator">in</span> f.readlines():
+<span class="lnr">153 </span>                        ilosc_linii+=<span class="Number">1</span>
+<span class="lnr">154 </span>                        <span class="Statement">if</span> StringBetweenChar(line, <span class="String">','</span>, <span class="Number">0</span>) == <span class="String">&quot;NS&quot;</span> <span class="pythonOperator">and</span> StringBetweenChar(line, <span class="String">','</span>, <span class="Number">1</span>) == <span class="String">&quot;ZD&quot;</span>:
+<span class="lnr">155 </span>                            id_jed_rej = StringBetweenChar(line, <span class="String">','</span>, <span class="Number">2</span>)
+<span class="lnr">156 </span>
+<span class="lnr">157 </span>                <span class="Statement">finally</span>:
+<span class="lnr">158 </span>                    f.close()
+<span class="lnr">159 </span>            <span class="Statement">except</span> <span class="Type">IOError</span>:
+<span class="lnr">160 </span>                self.dlg.ui.peditOutput.appendPlainText(<span class="String">u&quot;IOError: błąd wczytania pliku swde&quot;</span>)
+<span class="lnr">161 </span>        self.dlg.ui.leditLineInFile.setText(<span class="Function">str</span>(ilosc_linii))
+<span class="lnr">162 </span>        self.dlg.ui.leditIDZD.setText(id_jed_rej)
+<span class="lnr">163 </span>        self.dlg.ui.peditOutput.clear()
+<span class="lnr">164 </span>        id_jed_rej = id_jed_rej.strip()
+<span class="lnr">165 </span>        <span class="Statement">if</span> id_jed_rej !=<span class="String">&quot;&quot;</span>:
+<span class="lnr">166 </span>            self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;Znaleziony identyfikator jednostki rejestrowej: &quot;</span> + id_jed_rej + <span class="String">u&quot; zostanie wykorzystany  w bazie do stworzenia kluczy obiektów. Jeśli chcesz użyć innego możesz go zastąpić wpisanym przez siebie tekstem&quot;</span>)
+<span class="lnr">167 </span>        <span class="Statement">else</span>:
+<span class="lnr">168 </span>            self.dlg.ui.peditOutput.appendPlainText(<span class="String">u&quot;Nie znaleziono identyfikatora jednostki rejestrowej - musisz samodzielnie określić identyfikator zbioru danych, wpisując samodzielnie - litery i cyfry - najlepiej do 10 znaków. Nie używaj polskich liter&quot;</span>)
+<span class="lnr">169 </span>
+<span class="lnr">170 </span>    <span class="Statement">def</span> <span class="Function">pbtnSWDEHeaderInfoClicked</span>(self):
+<span class="lnr">171 </span>
+<span class="lnr">172 </span>        self.dlg.ui.peditSWDEHeader.clear()
+<span class="lnr">173 </span>        self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;Start: &quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">174 </span>        <span class="Statement">try</span>:
+<span class="lnr">175 </span>            f = <span class="Function">open</span>(<span class="Function">str</span>(self.swde_file.toUtf8()).decode(<span class="String">'utf-8'</span>), <span class="String">&quot;r&quot;</span>)
+<span class="lnr">176 </span>            <span class="Statement">try</span>:
+<span class="lnr">177 </span>                i = <span class="Number">0</span> <span class="Comment">#licznik linii - nie ma sensu wczytywac całego pliku</span>
+<span class="lnr">178 </span>                txt = <span class="String">''</span>
+<span class="lnr">179 </span>                <span class="Statement">for</span> line <span class="pythonOperator">in</span> f.readlines():
+<span class="lnr">180 </span>
+<span class="lnr">181 </span>                    <span class="Comment">#pocz = line[0:2]</span>
+<span class="lnr">182 </span>                    pocz = StringBetweenChar(line, <span class="String">','</span>,<span class="Number">0</span>)
+<span class="lnr">183 </span>                    <span class="Comment">#print i, pocz</span>
+<span class="lnr">184 </span>                    rodz_info = <span class="String">&quot;&quot;</span>
+<span class="lnr">185 </span>                    opis = <span class="String">&quot;&quot;</span>
+<span class="lnr">186 </span>                    opis_info = <span class="String">&quot;&quot;</span>
+<span class="lnr">187 </span>                    i+=<span class="Number">1</span>
+<span class="lnr">188 </span>                    <span class="Statement">if</span> pocz == <span class="String">&quot;NS&quot;</span>:
+<span class="lnr">189 </span>                        line = line.rstrip(<span class="String">'</span><span class="Special">\r</span><span class="String">'</span>)
+<span class="lnr">190 </span>                        line = line.rstrip(<span class="String">'</span><span class="Special">\n</span><span class="String">'</span>)
+<span class="lnr">191 </span>                        rodz_info = StringBetweenChar(line, <span class="String">','</span>,<span class="Number">1</span>)
+<span class="lnr">192 </span>
+<span class="lnr">193 </span>                        <span class="Comment">#opis_info = unicodedata.normalize('NFKD',opis_info).decode('ascii', 'replace')</span>
+<span class="lnr">194 </span>                        <span class="Comment">#opis_info = replacePlChars(StringBetweenChar(line, ',',2))</span>
+<span class="lnr">195 </span>                        opis_info = <span class="Function">unicode</span>( StringBetweenChar(line, <span class="String">','</span>,<span class="Number">2</span>), self.txtCodec(), <span class="String">'replace'</span>)
+<span class="lnr">196 </span>
+<span class="lnr">197 </span>                        <span class="Statement">if</span> rodz_info == <span class="String">u&quot;DN&quot;</span>:
+<span class="lnr">198 </span>                            opis = <span class="String">u&quot;Data utworzenia pliku: &quot;</span>
+<span class="lnr">199 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;TR&quot;</span>:
+<span class="lnr">200 </span>                            opis = <span class="String">u&quot;Nr identyfikacyjny jednostki tworzącej plik: &quot;</span>
+<span class="lnr">201 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;TN&quot;</span>:
+<span class="lnr">202 </span>                            opis = <span class="String">u&quot;Nazwa jednostki tworzącej plik: &quot;</span>
+<span class="lnr">203 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;TA&quot;</span>:
+<span class="lnr">204 </span>                            opis = <span class="String">u&quot;Adres jednostki tworzącej plik: &quot;</span>
+<span class="lnr">205 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;TO&quot;</span>:
+<span class="lnr">206 </span>                            opis = <span class="String">u&quot;Imię i nazwisko wykonawcy: &quot;</span>
+<span class="lnr">207 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;ZN&quot;</span>:
+<span class="lnr">208 </span>                            opis = <span class="String">u&quot;Nazwa systemu - źródła danych: &quot;</span>
+<span class="lnr">209 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;ZR&quot;</span>:
+<span class="lnr">210 </span>                            opis = <span class="String">u&quot;Nr identyfikacyjny systemu - źródła danych: &quot;</span>
+<span class="lnr">211 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;ZD&quot;</span>:
+<span class="lnr">212 </span>                            opis = <span class="String">u&quot;Nazwa zbioru danych - reprezentowanego obiektu: &quot;</span>
+<span class="lnr">213 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;OP&quot;</span>:
+<span class="lnr">214 </span>                            opis = <span class="String">u&quot;Przeznaczenie danych: &quot;</span>
+<span class="lnr">215 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;OR&quot;</span>:
+<span class="lnr">216 </span>                            opis = <span class="String">u&quot;Nr identyfikacyjny jednostki przeznaczenia: &quot;</span>
+<span class="lnr">217 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;ON&quot;</span>:
+<span class="lnr">218 </span>                            opis = <span class="String">u&quot;Nazwa jednostki przeznaczenia: &quot;</span>
+<span class="lnr">219 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;OA&quot;</span>:
+<span class="lnr">220 </span>                            opis = <span class="String">u&quot;Adres jednostki przeznaczenia: &quot;</span>
+<span class="lnr">221 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;OO&quot;</span>:
+<span class="lnr">222 </span>                            opis = <span class="String">u&quot;Imię i nazwisko odbiorcy: &quot;</span>
+<span class="lnr">223 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;UX&quot;</span>:
+<span class="lnr">224 </span>                            opis = <span class="String">u&quot;Nazwa układu współrzędnych: &quot;</span>
+<span class="lnr">225 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;OS&quot;</span>:
+<span class="lnr">226 </span>                            opis = <span class="String">u&quot;Nazwa / numer strefy odwzorowania: &quot;</span>
+<span class="lnr">227 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;NX&quot;</span>:
+<span class="lnr">228 </span>                            opis = <span class="String">u&quot;Nazwa pierwszej współrzędnej : &quot;</span>
+<span class="lnr">229 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;NY&quot;</span>:
+<span class="lnr">230 </span>                            opis = <span class="String">u&quot;Nazwa drugiej wspolrzednej: &quot;</span>
+<span class="lnr">231 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;NZ&quot;</span>:
+<span class="lnr">232 </span>                            opis = <span class="String">u&quot;Nazwa trzeciej wspolrzednej : &quot;</span>
+<span class="lnr">233 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;UH&quot;</span>:
+<span class="lnr">234 </span>                            opis = <span class="String">u&quot;System wysokosci : &quot;</span>
+<span class="lnr">235 </span>                        <span class="Statement">elif</span> rodz_info == <span class="String">u&quot;HZ&quot;</span>:
+<span class="lnr">236 </span>                            opis = <span class="String">u&quot;Poziom odniesienia : &quot;</span>
+<span class="lnr">237 </span>
+<span class="lnr">238 </span>                        txt += <span class="String">u&quot;&lt;b&gt;&quot;</span> + rodz_info + <span class="String">u&quot;&lt;/b&gt;  - &quot;</span> + opis + opis_info + <span class="String">u&quot;&lt;br&gt;&quot;</span>
+<span class="lnr">239 </span><span class="Error">                    </span>
+<span class="lnr">240 </span>                    <span class="Statement">if</span> i == <span class="Number">100</span>:
+<span class="lnr">241 </span>                        <span class="Statement">break</span>
+<span class="lnr">242 </span>                self.dlg.ui.peditSWDEHeader.setText(txt)
+<span class="lnr">243 </span><span class="Error">                    </span>
+<span class="lnr">244 </span>
+<span class="lnr">245 </span>            <span class="Statement">finally</span>:
+<span class="lnr">246 </span>                txt = <span class="String">'Plik zamkniety: '</span> + time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>)
+<span class="lnr">247 </span>                self.dlg.ui.peditOutput.appendPlainText(txt)
+<span class="lnr">248 </span>                f.close()
+<span class="lnr">249 </span><span class="Error">        </span>
+<span class="lnr">250 </span>        <span class="Statement">except</span> <span class="Type">IOError</span>:
+<span class="lnr">251 </span>            self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;IOError:&quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">252 </span>            <span class="Statement">pass</span>
+<span class="lnr">253 </span>
+<span class="lnr">254 </span>
+<span class="lnr">255 </span>    <span class="Statement">def</span> <span class="Function">pbtnSWDEHeaderFullClicked</span>(self):
+<span class="lnr">256 </span>        self.dlg.ui.peditSWDEHeader.clear()
+<span class="lnr">257 </span>        self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;Start: &quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">258 </span>        txtcodec = self.txtCodec()
+<span class="lnr">259 </span>        <span class="Statement">try</span>:
+<span class="lnr">260 </span>            f = <span class="Function">open</span>(<span class="Function">str</span>(self.swde_file.toUtf8()).decode(<span class="String">'utf-8'</span>), <span class="String">&quot;r&quot;</span>)
+<span class="lnr">261 </span>            <span class="Statement">try</span>:
+<span class="lnr">262 </span>                i = <span class="Number">0</span> <span class="Comment">#licznik linii - nie ma sensu wczytywac całego pliku</span>
+<span class="lnr">263 </span>                txt = <span class="String">''</span>
+<span class="lnr">264 </span>                <span class="Statement">for</span> line <span class="pythonOperator">in</span> f.readlines():
+<span class="lnr">265 </span>                    i+=<span class="Number">1</span>
+<span class="lnr">266 </span>                    txt += <span class="Function">unicode</span>(line, txtcodec, <span class="String">'replace'</span>)
+<span class="lnr">267 </span>
+<span class="lnr">268 </span>
+<span class="lnr">269 </span>                    <span class="Statement">if</span> i == <span class="Number">1000</span>:
+<span class="lnr">270 </span>                        <span class="Statement">break</span>
+<span class="lnr">271 </span>                self.dlg.ui.peditSWDEHeader.setText(txt)<span class="Error"> </span>
+<span class="lnr">272 </span>
+<span class="lnr">273 </span>            <span class="Statement">finally</span>:
+<span class="lnr">274 </span>                txt = <span class="String">'Plik zamkniety: '</span> + time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>)
+<span class="lnr">275 </span>                self.dlg.ui.peditOutput.appendPlainText(txt)
+<span class="lnr">276 </span>                f.close()
+<span class="lnr">277 </span><span class="Error">        </span>
+<span class="lnr">278 </span>        <span class="Statement">except</span> <span class="Type">IOError</span>:
+<span class="lnr">279 </span>            self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;IOError:&quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">280 </span>            <span class="Statement">pass</span>
+<span class="lnr">281 </span>
+<span class="lnr">282 </span>    <span class="Statement">def</span> <span class="Function">txtCodec</span>(self):
+<span class="lnr">283 </span>        <span class="Statement">if</span> self.dlg.ui.rdbtnKodowanieISO.isChecked():
+<span class="lnr">284 </span>            <span class="Statement">return</span>  <span class="String">'iso8859_2'</span>
+<span class="lnr">285 </span>        <span class="Statement">elif</span> self.dlg.ui.rdbtnKodowanieWidnows.isChecked():
+<span class="lnr">286 </span>            <span class="Statement">return</span> <span class="String">'cp1250'</span>
+<span class="lnr">287 </span>        <span class="Statement">elif</span> self.dlg.ui.rdbtnKodowanieUTF.isChecked():
+<span class="lnr">288 </span>            <span class="Statement">return</span> <span class="String">'utf-8'</span>
+<span class="lnr">289 </span>    <span class="Comment">#...................................................................................</span>
+<span class="lnr">290 </span>    <span class="Statement">def</span> <span class="Function">pbtnImportujClicked</span>(self):
+<span class="lnr">291 </span>        pyproj4strFrom = self.cmb_pyproj4_items[<span class="Function">unicode</span>(self.dlg.ui.cmbPyprojFrom.currentText(),<span class="String">'utf-8'</span>)]
+<span class="lnr">292 </span>        pyproj4strTo = self.cmb_pyproj4_items[<span class="Function">unicode</span>(self.dlg.ui.cmbPyprojTo.currentText(),<span class="String">'utf-8'</span>)]
+<span class="lnr">293 </span>
+<span class="lnr">294 </span>        <span class="Comment">#lista tabel, ktore beda brane pod uwage - glowny cel - kontrola nad danymi w trakcie pisania tego skryptu</span>
+<span class="lnr">295 </span>        <span class="Comment">#uwaga - bardzo istotna jest kolejnosc kolumn poniewaz tableList[nr] jest wykorzystywane do jako wartość kluczowa w słowniku g5Cols{}</span>
+<span class="lnr">296 </span>        tableList = [<span class="String">'G5JEW'</span>, <span class="String">'G5DZE'</span>, <span class="String">'G5OBR'</span>, <span class="String">'G5OSF'</span>, <span class="String">'G5INS'</span>, <span class="String">'G5MLZ'</span>, <span class="String">'G5OSZ'</span>, <span class="String">'G5JDR'</span>, <span class="String">'G5UDZ'</span>, <span class="String">'G5UDW'</span>, <span class="String">'G5KLU'</span>, <span class="String">'G5UZG'</span>, <span class="String">'G5DOK'</span>, <span class="String">'G5ADR'</span>]
+<span class="lnr">297 </span>        <span class="Comment">#lista column tablicowych - do innej obróbki niż pozostałe</span>
+<span class="lnr">298 </span>        arrayCols = [<span class="String">'G5RADR'</span>, <span class="String">'G5RPWL'</span>, <span class="String">'G5RPWD'</span>, <span class="String">'G5RKRG'</span>, <span class="String">'G5RSKD'</span>, <span class="String">'G5RDOK'</span>]
+<span class="lnr">299 </span>        <span class="Comment">#słownik kolumn do zmiany nazwy - zmieniamy polskie znaki w nazwie kolumn bo trochę to broi przy pytaniach SQL</span>
+<span class="lnr">300 </span>        plcharCols =  {<span class="String">u'G5RŻONA'</span>:<span class="String">'G5RZONA'</span>, <span class="String">u'G5RMĄŻ'</span>:<span class="String">'G5RMAZ'</span>, <span class="String">u'G5RPWŁ'</span>:<span class="String">'G5RPWL'</span>, <span class="String">u'G5RWŁ'</span>:<span class="String">'G5RWL'</span>, <span class="String">u'G5RWŁS'</span>:<span class="String">'G5RWLS'</span>, <span class="String">u'G5RWŁD'</span>:<span class="String">'G5RWLD'</span>}
+<span class="lnr">301 </span>        g5Cols = {}
+<span class="lnr">302 </span>
+<span class="lnr">303 </span>        Cols = [<span class="String">'G5IDJ'</span>, <span class="String">'G5PEW'</span>, <span class="String">'G5NAZ'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>,<span class="String">'G5RKRG'</span>]<span class="Comment">#g5jew</span>
+<span class="lnr">304 </span>        g5Cols[tableList[<span class="Number">0</span>]] = Cols
+<span class="lnr">305 </span>        Cols = [ <span class="String">'G5IDD'</span>,  <span class="String">'GEOM'</span>,    <span class="String">'NR'</span>, <span class="String">'G5IDR'</span>, <span class="String">'G5NOS'</span>, <span class="String">'G5WRT'</span>, <span class="String">'G5DWR'</span>, <span class="String">'G5PEW'</span>, <span class="String">'G5RZN'</span>, <span class="String">'G5DWW'</span>, <span class="String">'G5RADR'</span>, <span class="String">'G5RPWL'</span>, <span class="String">'G5RPWD'</span>, <span class="String">'G5RKRG'</span>, <span class="String">'G5RJDR'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>] <span class="Comment">#g5dze</span>
+<span class="lnr">306 </span>        g5Cols[tableList[<span class="Number">1</span>]] = Cols
+<span class="lnr">307 </span>        Cols = [ <span class="String">'G5NRO'</span>, <span class="String">'G5PEW'</span>, <span class="String">'G5NAZ'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>, <span class="String">'G5RKRG'</span>, <span class="String">'G5RJEW'</span>, <span class="String">'IDJEW'</span>] <span class="Comment">#g5obr</span>
+<span class="lnr">308 </span>        g5Cols[tableList[<span class="Number">2</span>]] = Cols
+<span class="lnr">309 </span>        Cols = [<span class="String">'G5PLC'</span>, <span class="String">'G5PSL'</span>, <span class="String">'G5NIP'</span>, <span class="String">'G5NZW'</span>, <span class="String">'G5PIM'</span>, <span class="String">'G5DIM'</span>, <span class="String">'G5OIM'</span>, <span class="String">'G5MIM'</span>, <span class="String">'G5OBL'</span>, <span class="String">'G5DOS'</span>, <span class="String">'G5RADR'</span>, <span class="String">'G5STI'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>] <span class="Comment">#g5osf</span>
+<span class="lnr">310 </span>        g5Cols[tableList[<span class="Number">3</span>]] = Cols
+<span class="lnr">311 </span>        Cols = [ <span class="String">'G5STI'</span>, <span class="String">'G5NPE'</span>, <span class="String">'G5NSK'</span>, <span class="String">'G5RGN'</span>, <span class="String">'G5NIP'</span>, <span class="String">'G5NZR'</span>, <span class="String">'G5NRR'</span>, <span class="String">'G5NSR'</span>, <span class="String">'G5RADR'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>] <span class="Comment">#g5ins</span>
+<span class="lnr">312 </span>        g5Cols[tableList[<span class="Number">4</span>]] = Cols
+<span class="lnr">313 </span>        Cols = [<span class="String">'G5RZONA'</span>,  <span class="String">'G5RMAZ'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>] <span class="Comment">#g5mlz</span>
+<span class="lnr">314 </span>        g5Cols[tableList[<span class="Number">5</span>]] = Cols
+<span class="lnr">315 </span>        Cols = [ <span class="String">'G5STI'</span>, <span class="String">'G5NPE'</span>, <span class="String">'G5NSK'</span>, <span class="String">'G5RGN'</span>, <span class="String">'G5NIP'</span>, <span class="String">'G5RSKD'</span>, <span class="String">'G5RADR'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>] <span class="Comment">#g5osz</span>
+<span class="lnr">316 </span>        g5Cols[tableList[<span class="Number">6</span>]] = Cols
+<span class="lnr">317 </span>        Cols = [<span class="String">'G5TJR'</span>, <span class="String">'G5IJR'</span>, <span class="String">'G5RGN'</span>, <span class="String">'G5RWL'</span>, <span class="String">'G5RWLS'</span>, <span class="String">'G5RWLD'</span>, <span class="String">'G5ROBR'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span> ] <span class="Comment">#g5jdr</span>
+<span class="lnr">318 </span>        g5Cols[tableList[<span class="Number">7</span>]] = Cols
+<span class="lnr">319 </span>        Cols = [ <span class="String">'G5UD'</span>, <span class="String">'G5RWLS'</span>, <span class="String">'G5RPOD'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>] <span class="Comment">#g5udz</span>
+<span class="lnr">320 </span>        g5Cols[tableList[<span class="Number">8</span>]] = Cols
+<span class="lnr">321 </span>        Cols = [ <span class="String">'G5RWD'</span>, <span class="String">'G5UD'</span>, <span class="String">'G5RWLD'</span>, <span class="String">'G5RPOD'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>] <span class="Comment">#g5udw</span>
+<span class="lnr">322 </span>        g5Cols[tableList[<span class="Number">9</span>]] = Cols
+<span class="lnr">323 </span>        Cols = [ <span class="String">'G5OFU'</span>, <span class="String">'G5OZU'</span>, <span class="String">'G5OZK'</span>, <span class="String">'G5PEW'</span>, <span class="String">'G5RDZE'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>] <span class="Comment">#g5klu</span>
+<span class="lnr">324 </span>        g5Cols[tableList[<span class="Number">10</span>]] = Cols
+<span class="lnr">325 </span>        Cols = [ <span class="String">'G5IDT'</span>, <span class="String">'G5OZU'</span>,<span class="String">'G5OFU'</span>, <span class="String">'G5PEW'</span>, <span class="String">'G5RKRG'</span>, <span class="String">'G5ROBR'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>] <span class="Comment">#g5uzg</span>
+<span class="lnr">326 </span>        g5Cols[tableList[<span class="Number">11</span>]] = Cols
+<span class="lnr">327 </span>        Cols = [<span class="String">'G5KDK'</span>, <span class="String">'G5DTD'</span>, <span class="String">'G5DTP'</span>, <span class="String">'G5SYG'</span>, <span class="String">'G5NSR'</span>, <span class="String">'G5OPD'</span>, <span class="String">'G5RDOK'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>] <span class="Comment">#g5dok</span>
+<span class="lnr">328 </span>        g5Cols[tableList[<span class="Number">12</span>]] = Cols
+<span class="lnr">329 </span>        Cols = [<span class="String">'G5TAR'</span>, <span class="String">'G5NAZ'</span>, <span class="String">'G5KRJ'</span>, <span class="String">'G5WJD'</span>, <span class="String">'G5PWJ'</span>, <span class="String">'G5GMN'</span>, <span class="String">'G5ULC'</span>, <span class="String">'G5NRA'</span>, <span class="String">'G5NRL'</span>, <span class="String">'G5MSC'</span>, <span class="String">'G5KOD'</span>, <span class="String">'G5PCZ'</span>, <span class="String">'G5DTW'</span>, <span class="String">'G5DTU'</span>]<span class="Comment">#g5adr</span>
+<span class="lnr">330 </span>        g5Cols[tableList[<span class="Number">13</span>]] = Cols
+<span class="lnr">331 </span>
+<span class="lnr">332 </span>        rdbase = RobDBBase(<span class="String">'localhost'</span>, <span class="String">'swdegis'</span>, <span class="String">'biuro'</span>, <span class="String">'melioracja'</span>, <span class="Number">1</span>)
+<span class="lnr">333 </span>        rdg5Table = {}
+<span class="lnr">334 </span>        <span class="Comment">#nazwy kolumn muszą zostać podane dokładnie jak w bazie - czyli małymi literami</span>
+<span class="lnr">335 </span>        <span class="Comment">#na przyszłość można to rozwiązać w samej RobDBTable</span>
+<span class="lnr">336 </span>        <span class="Comment">#za zamianę liter na małe w tablicy odpowiada ta fikuśna konstrukcja: [x.lower() ....]</span>
+<span class="lnr">337 </span>        <span class="Statement">for</span> tableName <span class="pythonOperator">in</span> tableList:
+<span class="lnr">338 </span>            rdg5Table[tableName] = RobDBTable(rdbase, tableName, [x.lower() <span class="Statement">for</span> x <span class="pythonOperator">in</span> g5Cols[tableName]], <span class="Number">1</span>, <span class="Number">1</span>)
+<span class="lnr">339 </span>
+<span class="lnr">340 </span>
+<span class="lnr">341 </span>        G5Table = <span class="String">&quot;&quot;</span>
+<span class="lnr">342 </span>
+<span class="lnr">343 </span>        collist = []
+<span class="lnr">344 </span>        valuelist = []
+<span class="lnr">345 </span>        arrayvalue = [] <span class="Comment"># wykorzystywane do przechowywania danych 1+ takich jak g5rkrg</span>
+<span class="lnr">346 </span>        arrayname = <span class="String">''</span> <span class="Comment"># nazwa tablicy tożsama z nazwą kolumny w bazie</span>
+<span class="lnr">347 </span>        pointslist = []
+<span class="lnr">348 </span>        point = []
+<span class="lnr">349 </span>        Kznak = <span class="String">&quot;&quot;</span>  <span class="Comment">#znacznik + albo -, oznaczajacy czy okreslane sa punkty tworzace polygon czy</span>
+<span class="lnr">350 </span>                    <span class="Comment">#wycinajace w nim dziure</span>
+<span class="lnr">351 </span>        oldKznak = <span class="String">&quot;0&quot;</span> <span class="Comment">#posluzy do sprawdzenia czy nastapila zmiana Kznak</span>
+<span class="lnr">352 </span>        newPoly = <span class="Number">0</span>
+<span class="lnr">353 </span>        polycount = <span class="Number">0</span>
+<span class="lnr">354 </span>
+<span class="lnr">355 </span>        id_jed_rej =  self.dlg.ui.leditIDZD.text() <span class="Comment">#</span><span class="Todo">TODO</span><span class="Comment"> sprawdzenie czy nie jest puste oraz sprawdzenie czy w bazie juz takiego nie ma (mozna to sprawdzenie wykonac podczas analizy) - rstrip na wszelki wypadek</span>
+<span class="lnr">356 </span>        id_jed_rej  = <span class="Function">str</span>(id_jed_rej).rstrip()
+<span class="lnr">357 </span>        ilosc_linii = self.ilosc_linii
+<span class="lnr">358 </span>        linianr = <span class="Number">0</span>     <span class="Comment">#przyda sie w momencie gdy sie program wywali - okresli ktora linia pliku swde nabroiła</span>
+<span class="lnr">359 </span>        obieg = <span class="Number">0</span>       <span class="Comment">#bedzie wykorzystywane przy commit do bazy, ktore bedzie realizowane co np 100 pytań SQL</span>
+<span class="lnr">360 </span>        txtcodec = self.txtCodec()
+<span class="lnr">361 </span>        transform = self.dlg.ui.chckTransform.isChecked()
+<span class="lnr">362 </span>
+<span class="lnr">363 </span>
+<span class="lnr">364 </span>        self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;Krok 1. Start programu: &quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">365 </span>
+<span class="lnr">366 </span>        import_file = <span class="Function">str</span>(self.swde_file.toUtf8()).decode(<span class="String">'utf-8'</span>)
+<span class="lnr">367 </span>
+<span class="lnr">368 </span>        <span class="Comment">#wypelnienie struktury słownikowej z rozwinięciami punktów granicznych</span>
+<span class="lnr">369 </span>        dic = {}
+<span class="lnr">370 </span>        dic_idx = <span class="String">&quot;&quot;</span>
+<span class="lnr">371 </span>        <span class="Statement">try</span>:
+<span class="lnr">372 </span>            f = <span class="Function">open</span>(import_file, <span class="String">&quot;r&quot;</span>)
+<span class="lnr">373 </span>            i = <span class="Number">0</span>
+<span class="lnr">374 </span>            <span class="Statement">try</span>:
+<span class="lnr">375 </span>                rp = <span class="Number">0</span>
+<span class="lnr">376 </span>                <span class="Statement">for</span> line <span class="pythonOperator">in</span> f.readlines():
+<span class="lnr">377 </span>                    pocz = StringBetweenChar(line, <span class="String">','</span>,<span class="Number">0</span>)
+<span class="lnr">378 </span>                    <span class="Statement">if</span> pocz == <span class="String">&quot;RP&quot;</span>:
+<span class="lnr">379 </span>                        tab = StringBetweenChar(line, <span class="String">','</span>,<span class="Number">2</span>)
+<span class="lnr">380 </span>                        <span class="Statement">if</span> tab == <span class="String">&quot;G5PZG&quot;</span>:
+<span class="lnr">381 </span>                            nr = StringBetweenChar(line, <span class="String">','</span>, <span class="Number">3</span>)
+<span class="lnr">382 </span>                            rp = <span class="Number">1</span>
+<span class="lnr">383 </span>                            dic_idx = nr
+<span class="lnr">384 </span>                    <span class="Statement">elif</span> rp == <span class="Number">1</span>:
+<span class="lnr">385 </span>                        y =StringBetweenChar(line, <span class="String">','</span>, <span class="Number">2</span>)<span class="Error"> </span>
+<span class="lnr">386 </span>                        x =StringBetweenChar(line, <span class="String">','</span>, <span class="Number">3</span>)<span class="Error"> </span>
+<span class="lnr">387 </span>                        dic_value = y +<span class="String">&quot;,&quot;</span> + x
+<span class="lnr">388 </span>                        dic[nr] = dic_value
+<span class="lnr">389 </span>                        rp = <span class="Number">0</span>
+<span class="lnr">390 </span>                        i += <span class="Number">1</span>
+<span class="lnr">391 </span>
+<span class="lnr">392 </span>            <span class="Statement">finally</span>:
+<span class="lnr">393 </span>                self.dlg.ui.peditOutput.appendPlainText(<span class="String">u&quot;Przeczytano zawartośc pliku &quot;</span> + import_file + <span class="String">&quot; &quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">394 </span>                self.dlg.ui.peditOutput.appendPlainText(<span class="String">u&quot;ilość puntów granicznych do zamiany: &quot;</span> + <span class="Function">str</span>(i))
+<span class="lnr">395 </span>                f.close()
+<span class="lnr">396 </span>        <span class="Statement">except</span> <span class="Type">IOError</span>:
+<span class="lnr">397 </span>            self.dlg.ui.peditOutput.appendPlainText(<span class="String">u&quot;Błąd podczas szukania punktów granicznych &quot;</span> + <span class="String">&quot; &quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">398 </span>            <span class="Statement">pass</span>
+<span class="lnr">399 </span><span class="Error">        </span>
+<span class="lnr">400 </span>        <span class="Comment">#w celu szukania błędu</span>
+<span class="lnr">401 </span>        <span class="Comment">#for k in dic:</span>
+<span class="lnr">402 </span>        <span class="Comment">#    self.dlg.ui.peditOutput.appendPlainText(str(k) + &quot; = &quot; + dic[k] )</span>
+<span class="lnr">403 </span>        <span class="Statement">try</span>:
+<span class="lnr">404 </span>            f = <span class="Function">open</span>(import_file, <span class="String">&quot;r&quot;</span>)
+<span class="lnr">405 </span>            <span class="Statement">try</span>:
+<span class="lnr">406 </span>                self.dlg.ui.peditOutput.appendPlainText(<span class="String">u&quot;Krok 2. Ponowne wczytanie pliku: &quot;</span> + import_file + <span class="String">&quot; &quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">407 </span>                i = <span class="Number">0</span>;
+<span class="lnr">408 </span>                pgv = <span class="Number">0</span>; <span class="Comment">#value progress bara</span>
+<span class="lnr">409 </span>                linianr = <span class="Number">0</span>
+<span class="lnr">410 </span>                step = ilosc_linii/<span class="Number">1000</span>
+<span class="lnr">411 </span>                pgdlg = QProgressDialog(<span class="String">u&quot;Postęp&quot;</span>, <span class="String">&quot;Przerwij...&quot;</span>, <span class="Number">0</span>, <span class="Number">1000</span>)
+<span class="lnr">412 </span>                pgdlg.setLabelText(<span class="String">u&quot;Trwa aktualizacja bazy .... &quot;</span>)
+<span class="lnr">413 </span>                pgdlg.forceShow()
+<span class="lnr">414 </span>                przerwanie = <span class="Number">0</span> <span class="Comment"># wartość 1 będzie świadczyć o tym, że albo zostało przerwane przez użytkownika albo z powodu błędu</span>
+<span class="lnr">415 </span>                                <span class="Comment">#w takim przypadku  nie zostanie wykonany commit do bazy</span>
+<span class="lnr">416 </span>                <span class="Statement">for</span> line <span class="pythonOperator">in</span> f.readlines():
+<span class="lnr">417 </span>                    <span class="Statement">if</span> i == step:
+<span class="lnr">418 </span>                        pgv += <span class="Number">1</span>
+<span class="lnr">419 </span>                        pgdlg.setValue(pgv)
+<span class="lnr">420 </span>                        i = <span class="Number">0</span>
+<span class="lnr">421 </span>                    <span class="Statement">if</span>  pgdlg.wasCanceled():
+<span class="lnr">422 </span>                        przerwanie = <span class="Number">1</span>
+<span class="lnr">423 </span>                        <span class="Statement">break</span>
+<span class="lnr">424 </span>                    line = <span class="Function">unicode</span>(line, txtcodec)
+<span class="lnr">425 </span>                    i+=<span class="Number">1</span>
+<span class="lnr">426 </span>                    linianr+=<span class="Number">1</span> <span class="Comment">#przyda sie jak sie program wypierniczy</span>
+<span class="lnr">427 </span>
+<span class="lnr">428 </span>                    pocz = StringBetweenChar(line, <span class="String">','</span>,<span class="Number">0</span>)
+<span class="lnr">429 </span>
+<span class="lnr">430 </span>                    <span class="Statement">if</span> pocz == <span class="String">&quot;RO&quot;</span> <span class="pythonOperator">or</span> pocz == <span class="String">&quot;RD&quot;</span> <span class="pythonOperator">or</span> pocz == <span class="String">&quot;RC&quot;</span>:
+<span class="lnr">431 </span>                        <span class="Comment">#line = unicode(line, txtcodec)</span>
+<span class="lnr">432 </span>                        G5Table =  StringBetweenChar(line, <span class="String">','</span>,<span class="Number">2</span>)
+<span class="lnr">433 </span>                        g5id1_value = StringBetweenChar(line,<span class="String">','</span>,<span class="Number">3</span>)
+<span class="lnr">434 </span>                        g5id2_value = StringBetweenChar(line,<span class="String">','</span>,<span class="Number">4</span>)
+<span class="lnr">435 </span>                    <span class="Statement">if</span> line[<span class="Number">0</span>:<span class="Number">3</span>] == <span class="String">&quot;P,P&quot;</span>:
+<span class="lnr">436 </span>                        <span class="Comment">#self.dlg.ui.peditOutput.appendPlainText(u&quot;znaleziono ciąg line 0:3 = P,P&quot;)</span>
+<span class="lnr">437 </span>                        str1 =  StringBetweenChar(line, <span class="String">','</span>, <span class="Number">2</span>)
+<span class="lnr">438 </span>                        <span class="Comment">#self.dlg.ui.peditOutput.appendPlainText(u&quot;str1 = &quot; + str1 + u&quot; o długości &quot; + str(len(str1)) )</span>
+<span class="lnr">439 </span>                        <span class="Statement">if</span> str1 == <span class="String">u&quot;G5PZG&quot;</span>:
+<span class="lnr">440 </span>                            <span class="Comment">#self.dlg.ui.peditOutput.appendPlainText(u&quot;wlazło&quot;)</span>
+<span class="lnr">441 </span>                            nr =  StringBetweenChar(line, <span class="String">','</span>, <span class="Number">3</span>)
+<span class="lnr">442 </span>                            <span class="Comment">#self.dlg.ui.peditOutput.appendPlainText(u&quot;nr = &quot; + nr)</span>
+<span class="lnr">443 </span>                            <span class="Comment">#strnr = nr.rstrip(';\r')# trzeba usuwac pojedynczo czyli tak jak poniżej</span>
+<span class="lnr">444 </span>                            strnr = nr.rstrip()<span class="Comment"># czyli jakiekolwiek białe znaki niezaleznie czy \n \r itp</span>
+<span class="lnr">445 </span>                            strnr = strnr.rstrip(<span class="String">';'</span>)
+<span class="lnr">446 </span>                            <span class="Comment">#self.dlg.ui.peditOutput.appendPlainText(u&quot;strnr = &quot; + strnr)</span>
+<span class="lnr">447 </span>                            <span class="Comment">#oldline = line</span>
+<span class="lnr">448 </span>                            <span class="Comment">#self.dlg.ui.peditOutput.appendPlainText(u&quot;oldline = &quot; + oldline)</span>
+<span class="lnr">449 </span>                            line = <span class="String">&quot;P,G,&quot;</span>+dic[strnr] + <span class="String">&quot;,;</span><span class="Special">\n</span><span class="String">&quot;</span>
+<span class="lnr">450 </span>                            <span class="Comment">#self.dlg.ui.peditOutput.appendPlainText(u&quot;line = &quot; + line)</span>
+<span class="lnr">451 </span>                            <span class="Comment">#self.dlg.ui.peditOutput.appendPlainText(u&quot;Zastąpiono ciąg P,P &gt;&gt;&quot; + oldline + &quot;&lt;&lt; na &gt;&gt;&quot; + line + &quot;&lt;&lt; &quot; + time.strftime(&quot;%Y-%m-%d %H:%M:%S&quot;))</span>
+<span class="lnr">452 </span><span class="Error">                            </span>
+<span class="lnr">453 </span>
+<span class="lnr">454 </span>                    <span class="Statement">if</span> G5Table <span class="pythonOperator">in</span> tableList:
+<span class="lnr">455 </span>                        <span class="Comment">#line = unicode(line, txtcodec)</span>
+<span class="lnr">456 </span>                        colname = <span class="String">&quot;&quot;</span>
+<span class="lnr">457 </span>                        colvalue = <span class="String">&quot;&quot;</span>
+<span class="lnr">458 </span>                        znacznik = StringBetweenChar(line, <span class="String">','</span>,<span class="Number">0</span>)
+<span class="lnr">459 </span>                        <span class="Statement">if</span> znacznik == <span class="String">&quot;D&quot;</span> <span class="pythonOperator">or</span> znacznik == <span class="String">&quot;WG&quot;</span>:<span class="Error"> </span>
+<span class="lnr">460 </span>                            line = line.rstrip()
+<span class="lnr">461 </span>                            line = line.rstrip(<span class="String">';'</span>) <span class="Comment"># szczególnie linie ze znacznikami WG zakończone są średnikiem </span>
+<span class="lnr">462 </span>                            line = line.strip(<span class="String">&quot;'&quot;</span>)
+<span class="lnr">463 </span>                            line = line.strip(<span class="String">'&quot;'</span>)
+<span class="lnr">464 </span>                            line = line.replace(<span class="String">&quot;'&quot;</span>, <span class="String">''</span>)
+<span class="lnr">465 </span>                            line = line.replace(<span class="String">'&quot;'</span>, <span class="String">&quot;&quot;</span>)
+<span class="lnr">466 </span>                            colname = StringBetweenChar(line,<span class="String">','</span>,<span class="Number">1</span>)
+<span class="lnr">467 </span>                            <span class="Comment">#zamiana nazw kolumn z polskimi znakami</span>
+<span class="lnr">468 </span>                            <span class="Statement">if</span> colname <span class="pythonOperator">in</span> plcharCols:
+<span class="lnr">469 </span>                                colname = plcharCols[colname]<span class="Error"> </span>
+<span class="lnr">470 </span>                            colvalue = StringBetweenChar(line,<span class="String">','</span>,<span class="Number">3</span>)
+<span class="lnr">471 </span>                            <span class="Comment">#dzialania wspolne dla wszystkich tablic</span>
+<span class="lnr">472 </span>                            <span class="Statement">if</span> colname <span class="pythonOperator">in</span> g5Cols[G5Table]:
+<span class="lnr">473 </span>                                <span class="Statement">if</span> colname <span class="pythonOperator">in</span> arrayCols:
+<span class="lnr">474 </span>                                    <span class="Statement">if</span> arrayname == <span class="String">''</span>: <span class="Comment">#czyli inicjujemy tablice</span>
+<span class="lnr">475 </span>                                        arrayvalue = []
+<span class="lnr">476 </span>                                        arrayname = colname
+<span class="lnr">477 </span>                                    <span class="Statement">elif</span> arrayname != colname: <span class="Comment">#czyli zmienila sie tablica, trzeba dodać starą do listy column i wartości</span>
+<span class="lnr">478 </span>                                                                <span class="Comment">#oraz zainicjować nową tablicę</span>
+<span class="lnr">479 </span>                                        collist.append(arrayname)
+<span class="lnr">480 </span>                                        values = <span class="String">&quot;&quot;</span><span class="Error"> </span>
+<span class="lnr">481 </span>                                        <span class="Statement">for</span> value <span class="pythonOperator">in</span> arrayvalue:
+<span class="lnr">482 </span>                                            values = <span class="String">&quot;</span><span class="Special">\'</span><span class="String">&quot;</span> + value.strip(<span class="String">'[]'</span>) + <span class="String">&quot;</span><span class="Special">\'</span><span class="String">,&quot;</span>
+<span class="lnr">483 </span>                                        values = values.rstrip(<span class="String">&quot;,&quot;</span>)<span class="Comment">#usuniecie ostatniego przecinka</span>
+<span class="lnr">484 </span>
+<span class="lnr">485 </span>                                        valuelist.append(<span class="String">u&quot;ARRAY[&quot;</span> + values + <span class="String">u&quot;]&quot;</span>) <span class="Comment">#usuwam string przed array value</span>
+<span class="lnr">486 </span><span class="Error">                                        </span>
+<span class="lnr">487 </span>                                        arrayvalue = []
+<span class="lnr">488 </span>                                        arrayname = colname
+<span class="lnr">489 </span>                                    <span class="Comment">#tak czy siak trzeba dodac wartosc do pustej badz zaczetej tablicy</span>
+<span class="lnr">490 </span>                                    arrayvalue.append(colvalue)
+<span class="lnr">491 </span>
+<span class="lnr">492 </span>                                <span class="Statement">else</span>:
+<span class="lnr">493 </span>                                    collist.append(colname)
+<span class="lnr">494 </span>                                    valuelist.append(colvalue)
+<span class="lnr">495 </span>
+<span class="lnr">496 </span>                                <span class="Comment">#dzialania nietypowe</span>
+<span class="lnr">497 </span>                                <span class="Statement">if</span> colname == <span class="String">'G5IDD'</span> <span class="pythonOperator">and</span> G5Table == <span class="String">&quot;G5DZE&quot;</span>: <span class="Comment">#trzeba wyluskac numer dzialki i zapisac do oddzielnej kolumny</span>
+<span class="lnr">498 </span>                                    <span class="Comment">#nr_dzialki = StringBetweenChar(colvalue, '.', 2)</span>
+<span class="lnr">499 </span>                                    collist.append(<span class="String">u'nr'</span>)
+<span class="lnr">500 </span>                                    valuelist.append(StringBetweenChar(colvalue, <span class="String">'.'</span>, <span class="Number">2</span>))
+<span class="lnr">501 </span>                                    <span class="Comment">#nr obrębu też się przyda</span>
+<span class="lnr">502 </span>                                    collist.append(<span class="String">u'nrobr'</span>)
+<span class="lnr">503 </span>                                    valuelist.append(StringBetweenChar(colvalue, <span class="String">'.'</span>, <span class="Number">1</span>))
+<span class="lnr">504 </span>
+<span class="lnr">505 </span>                                <span class="Statement">if</span> colname == <span class="String">'G5RPOD'</span>: <span class="Comment">#dla tabel g5udz i g5udw - wyglada to nastepujaco: &quot;WG,G5RPOD,G5OSF,5465;&quot;</span>
+<span class="lnr">506 </span>                                                        <span class="Comment">#a więc najpierw mamy określenie do jakiej tabeli jest dowiązanie (osf, ins, mlz czy osz)</span>
+<span class="lnr">507 </span>                                                        <span class="Comment">#a potem wartość wiązania w danej tabeli. Należy więc jeszcze wyciągnąć wartość po drugim ','</span>
+<span class="lnr">508 </span>                                    collist.append(<span class="String">u'rpod_rodzaj'</span>)
+<span class="lnr">509 </span>                                    pod_rodzaj = StringBetweenChar(line, <span class="String">','</span>, <span class="Number">2</span>)
+<span class="lnr">510 </span>                                    valuelist.append(pod_rodzaj)
+<span class="lnr">511 </span>                                    <span class="Comment">#kolumna zawierajaca polaczone ze soba wartosci </span>
+<span class="lnr">512 </span>                                    collist.append(<span class="String">u'id_podmiot'</span>)
+<span class="lnr">513 </span>                                    valuelist.append(colvalue + pod_rodzaj)
+<span class="lnr">514 </span><span class="Error">                            </span>
+<span class="lnr">515 </span>
+<span class="lnr">516 </span>                        <span class="Statement">elif</span> znacznik == <span class="String">&quot;K&quot;</span>:
+<span class="lnr">517 </span>                            Kznak = StringBetweenChar(line, <span class="String">','</span>,<span class="Number">1</span>)<span class="Comment">#czyli albo '+;' albo '-;'</span>
+<span class="lnr">518 </span>                            Kznak = Kznak[<span class="Number">0</span>]<span class="Comment">#pozostawienie tylko + albo -</span>
+<span class="lnr">519 </span>                            newPoly = <span class="Number">1</span>
+<span class="lnr">520 </span>                            polycount+=<span class="Number">1</span>
+<span class="lnr">521 </span><span class="Error">                           </span>
+<span class="lnr">522 </span>                        <span class="Statement">elif</span> znacznik == <span class="String">&quot;P&quot;</span>:
+<span class="lnr">523 </span>                            yvalue = StringBetweenChar(line, <span class="String">','</span>,<span class="Number">2</span>)
+<span class="lnr">524 </span>                            xvalue = StringBetweenChar(line, <span class="String">','</span>,<span class="Number">3</span>)
+<span class="lnr">525 </span>                            <span class="Comment">#print &quot;xv:&quot;, xvalue, &quot;yv:&quot;, yvalue</span>
+<span class="lnr">526 </span>                            <span class="Statement">if</span> transform == <span class="Number">1</span> :
+<span class="lnr">527 </span>                                p1 = pyproj.Proj(pyproj4strFrom)
+<span class="lnr">528 </span>                                p2 = pyproj.Proj(pyproj4strTo)
+<span class="lnr">529 </span>                                x92, y92 = pyproj.transform(p1,p2,xvalue,yvalue)
+<span class="lnr">530 </span>                                value = <span class="Function">str</span>(x92) + <span class="String">&quot; &quot;</span> + <span class="Function">str</span>(y92)
+<span class="lnr">531 </span>                            <span class="Statement">else</span>:
+<span class="lnr">532 </span>                                value = xvalue + <span class="String">&quot; &quot;</span> + yvalue
+<span class="lnr">533 </span>                            point.append( polycount)
+<span class="lnr">534 </span>                            point.append(newPoly)
+<span class="lnr">535 </span>                            point.append(Kznak)
+<span class="lnr">536 </span>                            point.append(value)<span class="Error"> </span>
+<span class="lnr">537 </span>                            pointslist.append(point)
+<span class="lnr">538 </span>                            <span class="Comment">#print point</span>
+<span class="lnr">539 </span>                            point = []
+<span class="lnr">540 </span>                            newPoly = <span class="Number">0</span>
+<span class="lnr">541 </span>
+<span class="lnr">542 </span>                        <span class="Statement">elif</span> znacznik[<span class="Number">0</span>] == <span class="String">&quot;X&quot;</span>: <span class="Comment">#czyli koniec definicji recordu</span>
+<span class="lnr">543 </span>                            <span class="Comment">#print &quot;2 line&quot;, line</span>
+<span class="lnr">544 </span>                            <span class="Comment">#print &quot;2 znacznik = &quot;, znacznik, collist, valuelist</span>
+<span class="lnr">545 </span>                            p = <span class="String">&quot;&quot;</span>
+<span class="lnr">546 </span>                            p1 = <span class="String">&quot;&quot;</span>
+<span class="lnr">547 </span>                            <span class="Statement">if</span> <span class="Function">len</span>(pointslist)&gt;<span class="Number">0</span>:
+<span class="lnr">548 </span>                                <span class="Statement">for</span> points <span class="pythonOperator">in</span> pointslist:
+<span class="lnr">549 </span>                                    <span class="Statement">if</span> points[<span class="Number">1</span>] == <span class="Number">1</span>:<span class="Comment">#newPoly</span>
+<span class="lnr">550 </span>                                        <span class="Comment">#p1 = points[3]</span>
+<span class="lnr">551 </span>                                        <span class="Statement">if</span> points[<span class="Number">0</span>] == <span class="Number">1</span>:<span class="Comment">#czyli pierwszy i byc moze jedyny polygon</span>
+<span class="lnr">552 </span>                                            p = <span class="String">u&quot;POLYGON((&quot;</span><span class="Error"> </span>
+<span class="lnr">553 </span>                                        <span class="Statement">else</span>: <span class="Comment">#czyli ewentualne kolejne polygony</span>
+<span class="lnr">554 </span>                                            p = p + p1 + <span class="String">u&quot;),(&quot;</span>
+<span class="lnr">555 </span>                                        p1 = points[<span class="Number">3</span>]
+<span class="lnr">556 </span>                                    p = p + points[<span class="Number">3</span>] + <span class="String">u','</span><span class="Error"> </span>
+<span class="lnr">557 </span>                                p = p + p1 + <span class="String">u&quot;))&quot;</span>
+<span class="lnr">558 </span>                                collist.append(<span class="String">u&quot;geom&quot;</span>)
+<span class="lnr">559 </span>                                valuelist.append(p)
+<span class="lnr">560 </span><span class="Error">                            </span>
+<span class="lnr">561 </span>                            <span class="Comment">#dodatnie id_jed_rej do kazdej tabeli</span>
+<span class="lnr">562 </span>                            collist.append(<span class="String">&quot;id_zd&quot;</span>)
+<span class="lnr">563 </span>                            valuelist.append(id_jed_rej)
+<span class="lnr">564 </span>                            <span class="Comment">#dodanie id1 i id2 do kazdej z tabel</span>
+<span class="lnr">565 </span>                            collist.append(<span class="String">&quot;g5id1&quot;</span>)
+<span class="lnr">566 </span>                            valuelist.append(g5id1_value)
+<span class="lnr">567 </span>                            collist.append(<span class="String">&quot;g5id2&quot;</span>)
+<span class="lnr">568 </span>                            valuelist.append(g5id2_value)
+<span class="lnr">569 </span>                            <span class="Comment">#dodanie unikatowej kolumny - będzie stanowiła klucz główny w całej bazie</span>
+<span class="lnr">570 </span>                            collist.append(<span class="String">'tab_uid'</span>)
+<span class="lnr">571 </span>                            valuelist.append(id_jed_rej+g5id1_value)
+<span class="lnr">572 </span>
+<span class="lnr">573 </span>
+<span class="lnr">574 </span>                            <span class="Comment">#sprawdzenie czy jest jeszcze jakas tablica, ktora nie zostala dodana do valuelist</span>
+<span class="lnr">575 </span>                            <span class="Statement">if</span> <span class="Function">len</span>(arrayvalue)&gt;<span class="Number">0</span>:
+<span class="lnr">576 </span>                                collist.append(arrayname)
+<span class="lnr">577 </span>                                values = <span class="String">&quot;&quot;</span>
+<span class="lnr">578 </span>                                <span class="Statement">for</span> value <span class="pythonOperator">in</span> arrayvalue:
+<span class="lnr">579 </span>                                    values = <span class="String">&quot;</span><span class="Special">\'</span><span class="String">&quot;</span> + value.strip(<span class="String">'[]'</span>) + <span class="String">&quot;</span><span class="Special">\'</span><span class="String">,&quot;</span>
+<span class="lnr">580 </span>                                values = values.rstrip(<span class="String">&quot;,&quot;</span>)<span class="Comment">#usuniecie ostatniego przecinka</span>
+<span class="lnr">581 </span>                                valuelist.append(<span class="String">u&quot;ARRAY[&quot;</span> + values + <span class="String">&quot;]&quot;</span>)
+<span class="lnr">582 </span>                                arrayname = <span class="String">''</span>
+<span class="lnr">583 </span>                                arrayvalue = []
+<span class="lnr">584 </span>
+<span class="lnr">585 </span><span class="Error">                                                    </span>
+<span class="lnr">586 </span>                            rdg5Table[G5Table].insert(<span class="Number">0</span>, collist, valuelist)
+<span class="lnr">587 </span><span class="Error">                            </span>
+<span class="lnr">588 </span>                            <span class="Comment">#obieg+=1</span>
+<span class="lnr">589 </span>                            <span class="Comment">#if obieg == 1000:</span>
+<span class="lnr">590 </span>                            <span class="Comment">#    rdbase.commit()</span>
+<span class="lnr">591 </span>                            <span class="Comment">#    obieg = 0</span>
+<span class="lnr">592 </span>                            obieg+=<span class="Number">1</span>
+<span class="lnr">593 </span>                            collist = []
+<span class="lnr">594 </span>                            valuelist = []
+<span class="lnr">595 </span>                            pointslist = []
+<span class="lnr">596 </span>                            Kznak = <span class="String">&quot;&quot;</span>
+<span class="lnr">597 </span>                            polycount = <span class="Number">0</span>
+<span class="lnr">598 </span>                            G5Table = <span class="String">&quot;&quot;</span>
+<span class="lnr">599 </span>                    <span class="Comment">#i = i+1</span>
+<span class="lnr">600 </span>            <span class="Statement">except</span>:
+<span class="lnr">601 </span>                cols = <span class="String">&quot;[&quot;</span>
+<span class="lnr">602 </span>                values = <span class="String">&quot;[&quot;</span>
+<span class="lnr">603 </span>                <span class="Statement">for</span> col <span class="pythonOperator">in</span> collist:
+<span class="lnr">604 </span>                    cols +=  col + <span class="String">&quot;, &quot;</span>
+<span class="lnr">605 </span>                <span class="Statement">for</span> value <span class="pythonOperator">in</span> valuelist:
+<span class="lnr">606 </span>                    values += value + <span class="String">&quot;, &quot;</span>
+<span class="lnr">607 </span>                cols += <span class="String">&quot;]&quot;</span>
+<span class="lnr">608 </span>                values += <span class="String">&quot;]&quot;</span>
+<span class="lnr">609 </span>                self.dlg.ui.peditOutput.appendPlainText(<span class="String">u&quot;błąd: &quot;</span> + G5Table + <span class="String">&quot; &quot;</span> +  cols + <span class="String">&quot; &quot;</span> + values + <span class="String">&quot;rekord nr: &quot;</span> + <span class="Function">str</span>(obieg) + <span class="String">&quot;line = &quot;</span> + line)
+<span class="lnr">610 </span>                przerwanie = <span class="Number">1</span>
+<span class="lnr">611 </span>
+<span class="lnr">612 </span>            <span class="Statement">finally</span>:
+<span class="lnr">613 </span>                <span class="Statement">if</span> przerwanie == <span class="Number">1</span>:
+<span class="lnr">614 </span>                    rdbase.rollback()
+<span class="lnr">615 </span>                    self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;anulowano zapis do bazy: &quot;</span> + <span class="Function">str</span>(obieg) + <span class="String">u&quot; rekordów&quot;</span>)
+<span class="lnr">616 </span>                <span class="Statement">else</span>:
+<span class="lnr">617 </span>                    rdbase.commit()
+<span class="lnr">618 </span>                    self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;zapisano do bazy: &quot;</span> + <span class="Function">str</span>(obieg) + <span class="String">u&quot; rekordów&quot;</span>)
+<span class="lnr">619 </span>                <span class="Comment">#self.dlg.ui.peditOutput.appendPlainText(&quot;przerobiono lini: &quot; + str(linianr))</span>
+<span class="lnr">620 </span>                <span class="Comment">#self.dlg.ui.peditOutput.appendPlainText(u&quot;Plik zamknięty: &quot; +  time.strftime(&quot;%Y-%m-%d %H:%M:%S&quot;))</span>
+<span class="lnr">621 </span>                f.close()
+<span class="lnr">622 </span><span class="Error">        </span>
+<span class="lnr">623 </span>        <span class="Statement">except</span> <span class="Type">IOError</span>:
+<span class="lnr">624 </span>            self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;IOError: &quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">625 </span>
+<span class="lnr">626 </span>        <span class="Function">print</span> <span class="String">&quot;przerobiono lini: &quot;</span> + <span class="Function">str</span>(linianr)
+<span class="lnr">627 </span>        self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;przerobiono lini: &quot;</span> + <span class="Function">str</span>(linianr))
+<span class="lnr">628 </span>        self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;Koniec programu: &quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">629 </span>
+<span class="lnr">630 </span>
+<span class="lnr">631 </span>    <span class="Statement">def</span> <span class="Function">pzgExtend</span>(self, swd_file):
+<span class="lnr">632 </span>
+<span class="lnr">633 </span>        <span class="Comment">#krok 1 - wczytanie danych z pliku swde do struktury słownikowej</span>
+<span class="lnr">634 </span>        self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;Wczytywanie pliku: &quot;</span> + swd_file + <span class="String">&quot; &quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">635 </span>        dic_conv_file =  swd_file + <span class="String">&quot;.tmp&quot;</span>
+<span class="lnr">636 </span>        dic = {}
+<span class="lnr">637 </span>        dic_idx = <span class="String">&quot;&quot;</span>
+<span class="lnr">638 </span>        <span class="Statement">try</span>:
+<span class="lnr">639 </span>            f = <span class="Function">open</span>(swd_file, <span class="String">&quot;r&quot;</span>)
+<span class="lnr">640 </span>            i = <span class="Number">0</span>
+<span class="lnr">641 </span>            <span class="Statement">try</span>:
+<span class="lnr">642 </span>                rp = <span class="Number">0</span>
+<span class="lnr">643 </span>                <span class="Statement">for</span> line <span class="pythonOperator">in</span> f.readlines():
+<span class="lnr">644 </span>                    pocz = StringBetweenChar(line, <span class="String">','</span>,<span class="Number">0</span>)
+<span class="lnr">645 </span>                    <span class="Statement">if</span> pocz == <span class="String">&quot;RP&quot;</span>:
+<span class="lnr">646 </span>                        tab = StringBetweenChar(line, <span class="String">','</span>,<span class="Number">2</span>)
+<span class="lnr">647 </span>                        <span class="Statement">if</span> tab == <span class="String">&quot;G5PZG&quot;</span>:
+<span class="lnr">648 </span>                            nr = StringBetweenChar(line, <span class="String">','</span>, <span class="Number">3</span>)
+<span class="lnr">649 </span>                            rp = <span class="Number">1</span>
+<span class="lnr">650 </span>                            dic_idx = nr
+<span class="lnr">651 </span>                    <span class="Statement">elif</span> rp == <span class="Number">1</span>:
+<span class="lnr">652 </span>                        y =StringBetweenChar(line, <span class="String">','</span>, <span class="Number">2</span>)<span class="Error"> </span>
+<span class="lnr">653 </span>                        x =StringBetweenChar(line, <span class="String">','</span>, <span class="Number">3</span>)<span class="Error"> </span>
+<span class="lnr">654 </span>                        dic_value = y +<span class="String">&quot;,&quot;</span> + x
+<span class="lnr">655 </span>                        dic[nr] = dic_value
+<span class="lnr">656 </span>                        rp = <span class="Number">0</span>
+<span class="lnr">657 </span>                        i += <span class="Number">1</span>
+<span class="lnr">658 </span>
+<span class="lnr">659 </span>            <span class="Statement">finally</span>:
+<span class="lnr">660 </span>                self.dlg.ui.peditOutput.appendPlainText(<span class="String">u&quot;ilość puntów granicznych do zamiany: &quot;</span> + <span class="Function">str</span>(i))
+<span class="lnr">661 </span>                f.close()
+<span class="lnr">662 </span>                self.dlg.ui.peditOutput.appendPlainText(<span class="String">u&quot;wczytano zawartośc pliku &quot;</span> + swd_file + <span class="String">&quot; &quot;</span> +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">663 </span>        <span class="Statement">except</span> <span class="Type">IOError</span>:
+<span class="lnr">664 </span>               <span class="Statement">return</span> <span class="Number">0</span>
+<span class="lnr">665 </span><span class="Error">        </span>
+<span class="lnr">666 </span>
+<span class="lnr">667 </span>        <span class="Comment">#ponowne wczytanie pliku i zapisanie do nowego</span>
+<span class="lnr">668 </span>        <span class="Statement">try</span>:
+<span class="lnr">669 </span>            f = <span class="Function">open</span>(swd_file, <span class="String">&quot;r&quot;</span>)
+<span class="lnr">670 </span>            cf_dic = <span class="Function">open</span>(dic_conv_file, <span class="String">&quot;w&quot;</span>)
+<span class="lnr">671 </span>            <span class="Statement">try</span>:
+<span class="lnr">672 </span>                <span class="Statement">for</span> line <span class="pythonOperator">in</span> f.readlines():
+<span class="lnr">673 </span>                    <span class="Statement">if</span> line[<span class="Number">0</span>:<span class="Number">3</span>] == <span class="String">&quot;P,P&quot;</span>:
+<span class="lnr">674 </span>                        string =  StringBetweenChar(line, <span class="String">','</span>, <span class="Number">2</span>)
+<span class="lnr">675 </span>                        <span class="Comment">#print string</span>
+<span class="lnr">676 </span>                        <span class="Statement">if</span> string == <span class="String">&quot;G5PZG&quot;</span>:
+<span class="lnr">677 </span>                            nr =  StringBetweenChar(line, <span class="String">','</span>, <span class="Number">3</span>)
+<span class="lnr">678 </span>                            strnr = nr.rstrip(<span class="String">';</span><span class="Special">\r</span><span class="String">'</span>)
+<span class="lnr">679 </span>                            new_line = <span class="String">&quot;P,G,&quot;</span>+dic[strnr] + <span class="String">&quot;,;</span><span class="Special">\n</span><span class="String">&quot;</span>
+<span class="lnr">680 </span>                            cf_dic.write(new_line)
+<span class="lnr">681 </span>                    <span class="Statement">else</span>:
+<span class="lnr">682 </span>                        cf_dic.write(line)
+<span class="lnr">683 </span>            <span class="Statement">finally</span>:
+<span class="lnr">684 </span>                f.close()
+<span class="lnr">685 </span>                cf_dic.close()
+<span class="lnr">686 </span>                self.dlg.ui.peditOutput.appendPlainText(<span class="String">&quot;Zapisano plik tymczasowy: &quot;</span> + dic_conv_file +  time.strftime(<span class="String">&quot;%Y-%m-%d %H:%M:%S&quot;</span>))
+<span class="lnr">687 </span>                <span class="Statement">return</span> <span class="Number">1</span>
+<span class="lnr">688 </span>        <span class="Statement">except</span> <span class="Type">IOError</span>:
+<span class="lnr">689 </span>            <span class="Statement">return</span> <span class="Number">0</span>
+<span class="lnr">690 </span>
+<span class="lnr">691 </span><span class="Comment">#==================================================================</span>
+<span class="lnr">692 </span>
+<span class="lnr">693 </span><span class="Statement">def</span> <span class="Function">StringBetweenChar</span>(string, char, nr):
+<span class="lnr">694 </span>    <span class="Comment">#wyszukuje lancuch znakow pomiedzy okreslonymi w char znakami</span>
+<span class="lnr">695 </span>    <span class="Comment">#nr - okresla pomiedzy ktorym (pierwszym) wystapieniem znaku</span>
+<span class="lnr">696 </span>    <span class="Comment">#a kolejnym znajduje sie szukany ciag. Jesli nr okresla ostatnie</span>
+<span class="lnr">697 </span>    <span class="Comment">#wystapienie znaku char w string-u zostanie wyszukany ciag do konca</span>
+<span class="lnr">698 </span>    <span class="Comment">#stringa</span>
+<span class="lnr">699 </span>    char_pos = -<span class="Number">1</span> <span class="Comment">#pozycja znaku w ciagu</span>
+<span class="lnr">700 </span>    char_wyst = <span class="Number">0</span> <span class="Comment"># kolejne wystapienie char w ciagu</span>
+<span class="lnr">701 </span>    char_nextpos = -<span class="Number">1</span> <span class="Comment"># pozycja kolejnego wystapienia znaku w ciagu</span>
+<span class="lnr">702 </span>
+<span class="lnr">703 </span>    <span class="Statement">if</span> nr == <span class="Number">0</span>: <span class="Comment">#czyli od poczatku stringa do pierwszego znaku</span>
+<span class="lnr">704 </span>        char_pos = <span class="Number">0</span>
+<span class="lnr">705 </span>        i = <span class="Number">0</span>
+<span class="lnr">706 </span>        <span class="Statement">for</span> ch <span class="pythonOperator">in</span> string:
+<span class="lnr">707 </span>            <span class="Statement">if</span> ch  == char:
+<span class="lnr">708 </span>                char_nextpos = i
+<span class="lnr">709 </span>                <span class="Statement">break</span>
+<span class="lnr">710 </span>            i = i + <span class="Number">1</span>
+<span class="lnr">711 </span>    <span class="Statement">else</span>:
+<span class="lnr">712 </span>        i = <span class="Number">0</span>
+<span class="lnr">713 </span>        <span class="Statement">for</span> ch <span class="pythonOperator">in</span> string:
+<span class="lnr">714 </span>            <span class="Statement">if</span> ch == char:
+<span class="lnr">715 </span>                char_wyst = char_wyst + <span class="Number">1</span>
+<span class="lnr">716 </span>                <span class="Statement">if</span> char_wyst == nr:
+<span class="lnr">717 </span>                    char_pos = i + <span class="Number">1</span>
+<span class="lnr">718 </span>                <span class="Statement">elif</span> char_wyst == nr+<span class="Number">1</span>:
+<span class="lnr">719 </span>                    char_nextpos = i
+<span class="lnr">720 </span>                    <span class="Statement">break</span>
+<span class="lnr">721 </span>            i = i + <span class="Number">1</span>
+<span class="lnr">722 </span>
+<span class="lnr">723 </span>    <span class="Statement">if</span> char_pos != -<span class="Number">1</span>: <span class="Comment">#czyli znaleziono znak</span>
+<span class="lnr">724 </span>        <span class="Statement">if</span> char_nextpos == -<span class="Number">1</span>: <span class="Comment">#czyli trzeba czytac do konca linii</span>
+<span class="lnr">725 </span>            char_nextpos = <span class="Function">len</span>(string)
+<span class="lnr">726 </span>        <span class="Statement">return</span>  string[char_pos:char_nextpos]
+<span class="lnr">727 </span>    <span class="Statement">else</span>:
+<span class="lnr">728 </span>        <span class="Statement">return</span> -<span class="Number">1</span>
+<span class="lnr">729 </span>
+<span class="lnr">730 </span><span class="Statement">def</span> <span class="Function">replacePlChars</span>(s):
+<span class="lnr">731 </span>    li = []
+<span class="lnr">732 </span>    <span class="Statement">for</span> c <span class="pythonOperator">in</span> s:
+<span class="lnr">733 </span>        <span class="Statement">if</span> c == <span class="String">'</span><span class="Special">\xc4\x85</span><span class="String">'</span>:
+<span class="lnr">734 </span>            li.append(<span class="String">'a'</span>)
+<span class="lnr">735 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u0104</span><span class="String">'</span>:
+<span class="lnr">736 </span>            li.append(<span class="String">'A'</span>)
+<span class="lnr">737 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u0107</span><span class="String">'</span>:
+<span class="lnr">738 </span>            li.append(<span class="String">'c'</span>)
+<span class="lnr">739 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u0106</span><span class="String">'</span>:
+<span class="lnr">740 </span>            li.append(<span class="String">'C'</span>)
+<span class="lnr">741 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u0119</span><span class="String">'</span>:
+<span class="lnr">742 </span>            li.append(<span class="String">'e'</span>)
+<span class="lnr">743 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u0118</span><span class="String">'</span>:
+<span class="lnr">744 </span>            li.append(<span class="String">'E'</span>)
+<span class="lnr">745 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u0142</span><span class="String">'</span>:
+<span class="lnr">746 </span>            li.append(<span class="String">'l'</span>)
+<span class="lnr">747 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u0141</span><span class="String">'</span>:
+<span class="lnr">748 </span>            li.append(<span class="String">'L'</span>)
+<span class="lnr">749 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u0144</span><span class="String">'</span>:
+<span class="lnr">750 </span>            li.append(<span class="String">'n'</span>)
+<span class="lnr">751 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u0143</span><span class="String">'</span>:
+<span class="lnr">752 </span>            li.append(<span class="String">'N'</span>)
+<span class="lnr">753 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\xf3</span><span class="String">'</span>:
+<span class="lnr">754 </span>            li.append(<span class="String">'o'</span>)
+<span class="lnr">755 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\xd3</span><span class="String">'</span>:
+<span class="lnr">756 </span>            li.append(<span class="String">'O'</span>)
+<span class="lnr">757 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u015b</span><span class="String">'</span>:
+<span class="lnr">758 </span>            li.append(<span class="String">'s'</span>)
+<span class="lnr">759 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u015a</span><span class="String">'</span>:
+<span class="lnr">760 </span>            li.append(<span class="String">'S'</span>)
+<span class="lnr">761 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u017c</span><span class="String">'</span>:
+<span class="lnr">762 </span>            li.append(<span class="String">'z'</span>)
+<span class="lnr">763 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u017b</span><span class="String">'</span>:
+<span class="lnr">764 </span>            li.append(<span class="String">'Z'</span>)
+<span class="lnr">765 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u017a</span><span class="String">'</span>:
+<span class="lnr">766 </span>            li.append(<span class="String">'z'</span>)
+<span class="lnr">767 </span>        <span class="Statement">elif</span> c == <span class="String">u'</span><span class="Special">\u0179</span><span class="String">'</span>:
+<span class="lnr">768 </span>            li.append(<span class="String">'Z'</span>)
+<span class="lnr">769 </span>        <span class="Statement">else</span>:
+<span class="lnr">770 </span>            li.append(c)
+<span class="lnr">771 </span>
+<span class="lnr">772 </span>    <span class="Statement">return</span> <span class="String">''</span>.join(li)
+<span class="lnr">773 </span>
+<span class="lnr">774 </span>
+<span class="lnr">775 </span>
+<span class="lnr">776 </span>
+<span class="lnr">777 </span>
+<span class="lnr">778 </span>
+<span class="lnr">779 </span>
+<span class="lnr">780 </span>
+<span class="lnr">781 </span>
+<span class="lnr">782 </span>
+<span class="lnr">783 </span>
+<span class="lnr">784 </span>
+<span class="lnr">785 </span>
+<span class="lnr">786 </span>
+<span class="lnr">787 </span>
+<span class="lnr">788 </span>
+<span class="lnr">789 </span>
+<span class="lnr">790 </span>
+</pre>
+</body>
+</html>

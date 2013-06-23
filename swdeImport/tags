@@ -1,0 +1,73 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+RobDBBase	rob_db_connection.py	/^class RobDBBase():$/;"	c
+RobDBTable	rob_db_connection.py	/^class RobDBTable():$/;"	c
+SQL	rob_db_connection.py	/^    SQL = ""            #jesli zostanie puste - potraktowane to zostanie jak select * from tabela $/;"	v	class:RobDBTable
+StringBetweenChar	swdeimport.py	/^def StringBetweenChar(string, char, nr):$/;"	f
+__init__	rob_db_connection.py	/^    def __init__(self, host, db, user, password, connect = 0):$/;"	m	class:RobDBBase
+__init__	rob_db_connection.py	/^    def __init__(self, rbdbbase, table="", col_list=['*'], id_nr=0, connect = 0, autocommit = 0, autoexec = 0 ):$/;"	m	class:RobDBTable
+__init__	swdeimport.py	/^    def __init__(self, iface):$/;"	m	class:swdeImport
+autocommit	rob_db_connection.py	/^    autocommit = 0$/;"	v	class:RobDBTable
+autoexec	rob_db_connection.py	/^    autoexec = 0           #jeśli 1 - polecenie sql zostanie wywolane od razu po wywołaniu, jesli nie wymaga exec()$/;"	v	class:RobDBTable
+base	rob_db_connection.py	/^    base = None         #obiekt RobDBBase$/;"	v	class:RobDBTable
+col_list	rob_db_connection.py	/^    col_list = ['*']    #lista kolumn, które będą wykorzystane w pytaniu SQL, muszą być podane przed połączeniem$/;"	v	class:RobDBTable
+colcount	rob_db_connection.py	/^    colcount = 0$/;"	v	class:RobDBTable
+commit	rob_db_connection.py	/^    def commit(self):$/;"	m	class:RobDBBase
+conn	rob_db_connection.py	/^    conn = None$/;"	v	class:RobDBBase
+connGuiSignals	swdeimport.py	/^    def connGuiSignals(self):$/;"	m	class:swdeImport
+connectdb	rob_db_connection.py	/^    def connectdb(self):$/;"	m	class:RobDBBase
+connectdb	rob_db_connection.py	/^    def connectdb(self):$/;"	m	class:RobDBTable
+cur	rob_db_connection.py	/^    cur = None          #cursor bazy pozyskiwany z RobDBBase.connectdb$/;"	v	class:RobDBTable
+cur	rob_db_connection.py	/^    cur = None$/;"	v	class:RobDBBase
+db	rob_db_connection.py	/^    db = ""$/;"	v	class:RobDBBase
+delete	rob_db_connection.py	/^    def delete(self, did):$/;"	m	class:RobDBTable
+execute	rob_db_connection.py	/^    def execute(self):$/;"	m	class:RobDBTable
+executeSQL	rob_db_connection.py	/^    def executeSQL(self, SQLstr):# TODO co ze zwracanym wynikiem w razie SELECT$/;"	m	class:RobDBBase
+executeSQL	rob_db_connection.py	/^    def executeSQL(self, SQLstr):# TODO zastanowic sie nad przeniesieniem do RobDBBase , zeby uniezaleznic od table$/;"	m	class:RobDBTable
+first	rob_db_connection.py	/^    def first(self):$/;"	m	class:RobDBTable
+get_col_value	rob_db_connection.py	/^    def get_col_value(self, colname):$/;"	m	class:RobDBTable
+get_id_name	rob_db_connection.py	/^    def get_id_name(self):$/;"	m	class:RobDBTable
+get_row	rob_db_connection.py	/^    def get_row(self, scroll=0):$/;"	m	class:RobDBTable
+get_row_nr	rob_db_connection.py	/^    def get_row_nr(self, nr):$/;"	m	class:RobDBTable
+get_rownumber	rob_db_connection.py	/^    def get_rownumber(self):$/;"	m	class:RobDBTable
+host	rob_db_connection.py	/^    host = ""$/;"	v	class:RobDBBase
+id_nr	rob_db_connection.py	/^    id_nr = 0           #nr kolumny z col_list stanowiacej klucz glowny$/;"	v	class:RobDBTable
+ilosc_linii	swdeimport.py	/^    ilosc_linii = ""$/;"	v	class:swdeImport
+initGui	swdeimport.py	/^    def initGui(self):$/;"	m	class:swdeImport
+insert	rob_db_connection.py	/^    def insert(self, uid, insert_cols_list, insert_values_list):$/;"	m	class:RobDBTable
+last	rob_db_connection.py	/^    def last(self):$/;"	m	class:RobDBTable
+next	rob_db_connection.py	/^    def next(self):$/;"	m	class:RobDBTable
+password	rob_db_connection.py	/^    password = ""$/;"	v	class:RobDBBase
+pbtnAnalizaWykonajClicked	swdeimport.py	/^    def pbtnAnalizaWykonajClicked(self):$/;"	m	class:swdeImport
+pbtnCreateSWDEDBClicked	swdeimport.py	/^    def pbtnCreateSWDEDBClicked(self):$/;"	m	class:swdeImport
+pbtnDBSaveSettingsClicked	swdeimport.py	/^    def pbtnDBSaveSettingsClicked(self):$/;"	m	class:swdeImport
+pbtnImportujClicked	swdeimport.py	/^    def pbtnImportujClicked(self):$/;"	m	class:swdeImport
+pbtnSWDEHeaderFullClicked	swdeimport.py	/^    def pbtnSWDEHeaderFullClicked(self):$/;"	m	class:swdeImport
+pbtnSWDEHeaderInfoClicked	swdeimport.py	/^    def pbtnSWDEHeaderInfoClicked(self):$/;"	m	class:swdeImport
+pgadmin	swdeimport.py	/^    pgadmin = ""$/;"	v	class:swdeImport
+pgadminpswd	swdeimport.py	/^    pgadminpswd = ""$/;"	v	class:swdeImport
+pgbase	swdeimport.py	/^    pgbase = ""$/;"	v	class:swdeImport
+pgserver	swdeimport.py	/^    pgserver = ""$/;"	v	class:swdeImport
+pguser	swdeimport.py	/^    pguser = ""$/;"	v	class:swdeImport
+pguserpswd	swdeimport.py	/^    pguserpswd = ""$/;"	v	class:swdeImport
+prev	rob_db_connection.py	/^    def prev(self):$/;"	m	class:RobDBTable
+pzgExtend	swdeimport.py	/^        def pzgExtend(self, swd_file):$/;"	f	function:swdeImport.pbtnImportujClicked
+pzgdic	swdeimport.py	/^    pzgdic = {}$/;"	v	class:swdeImport
+replacePlChars	swdeimport.py	/^def replacePlChars(s):$/;"	f
+rollback	rob_db_connection.py	/^    def rollback(self):$/;"	m	class:RobDBBase
+rowcount	rob_db_connection.py	/^    rowcount = 0$/;"	v	class:RobDBTable
+rows	rob_db_connection.py	/^    rows = ['']$/;"	v	class:RobDBTable
+run	swdeimport.py	/^    def run(self):$/;"	m	class:swdeImport
+swdeImport	swdeimport.py	/^class swdeImport:$/;"	c
+swde_file	swdeimport.py	/^    swde_file = ""$/;"	v	class:swdeImport
+table	rob_db_connection.py	/^    table = ""          #nazwa tabeli z bazy$/;"	v	class:RobDBTable
+tbtnWybierzSWDEFileClicked	swdeimport.py	/^    def tbtnWybierzSWDEFileClicked(self):$/;"	m	class:swdeImport
+txtCodec	swdeimport.py	/^    def txtCodec(self):$/;"	m	class:swdeImport
+unload	swdeimport.py	/^    def unload(self):$/;"	m	class:swdeImport
+update	rob_db_connection.py	/^    def update(self, uid, update_cols_list, update_values_list):$/;"	m	class:RobDBTable
+user	rob_db_connection.py	/^    user = ""$/;"	v	class:RobDBBase
+where	rob_db_connection.py	/^    def where(self, col_list, value_list): #najprostszy ale najczesciej wystepujacy where na swiecie typu "where col = value and ....." $/;"	m	class:RobDBTable
