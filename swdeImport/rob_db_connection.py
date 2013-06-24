@@ -8,8 +8,9 @@ class RobDBBase():
     db = ""
     user = ""
     password = ""
-    cur = None
-    conn = None
+    cur = "" #None - wyrzuca na windowsach błędy np self.conn = psycopg2.connect(...)
+            # object type None nie posiada atrybutu connect , czy jakoś tak:
+    conn = "" # j/w
     rows = []
     row_count = 0
 

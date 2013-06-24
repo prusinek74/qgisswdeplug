@@ -14,18 +14,18 @@
    <string>swdeImport</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../swdeImport/swdeImport/resources.qrc">
+   <iconset resource="resources.qrc">
     <normaloff>:/plugins/swdeimport/swde-plug-import-22b.png</normaloff>:/plugins/swdeimport/swde-plug-import-22b.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_16">
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tabSettings">
       <attribute name="icon">
-       <iconset resource="../../swdeImport/swdeImport/resources.qrc">
+       <iconset resource="resources.qrc">
         <normaloff>:/plugins/swdeimport/preferences-other.png</normaloff>:/plugins/swdeimport/preferences-other.png</iconset>
       </attribute>
       <attribute name="title">
@@ -35,7 +35,7 @@
        <item>
         <widget class="QTabWidget" name="tabWidget_2">
          <property name="currentIndex">
-          <number>1</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="tabDBSettings">
           <attribute name="title">
@@ -228,24 +228,6 @@
              <item>
               <layout class="QVBoxLayout" name="verticalLayout_5">
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_7">
-                 <item>
-                  <widget class="QLabel" name="label_17">
-                   <property name="text">
-                    <string>Template</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLineEdit" name="leditTemplate">
-                   <property name="text">
-                    <string>postgis_template</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_11">
                  <item>
                   <widget class="QLabel" name="label_18">
@@ -329,7 +311,7 @@
                <item>
                 <widget class="QPushButton" name="pbtnCreateSWDEDB">
                  <property name="text">
-                  <string>Utwórz bazę swde</string>
+                  <string>Stwórz strukturę bazy</string>
                  </property>
                 </widget>
                </item>
@@ -338,14 +320,9 @@
             </layout>
            </item>
           </layout>
-          <zorder></zorder>
-          <zorder>label_18</zorder>
-          <zorder>leditSRID</zorder>
-          <zorder>pbtnCreateSWDEDB</zorder>
-          <zorder>groupBox</zorder>
-          <zorder>verticalSpacer</zorder>
+          <zorder>line_2</zorder>
+          <zorder>label</zorder>
           <zorder>line</zorder>
-          <zorder>horizontalSpacer</zorder>
          </widget>
          <widget class="QWidget" name="tabImportOptions">
           <attribute name="title">
@@ -648,7 +625,7 @@
      </widget>
      <widget class="QWidget" name="tabImport">
       <attribute name="icon">
-       <iconset resource="../../swdeImport/swdeImport/resources.qrc">
+       <iconset resource="resources.qrc">
         <normaloff>:/plugins/swdeimport/system-run.png</normaloff>:/plugins/swdeimport/system-run.png</iconset>
       </attribute>
       <attribute name="title">
@@ -675,7 +652,7 @@
               <string>...</string>
              </property>
              <property name="icon">
-              <iconset resource="../../swdeImport/swdeImport/resources.qrc">
+              <iconset resource="resources.qrc">
                <normaloff>:/plugins/swdeimport/document-open.png</normaloff>:/plugins/swdeimport/document-open.png</iconset>
              </property>
             </widget>
@@ -928,7 +905,7 @@
      </widget>
      <widget class="QWidget" name="tabSDEInfo">
       <attribute name="icon">
-       <iconset resource="../../swdeImport/swdeImport/resources.qrc">
+       <iconset resource="resources.qrc">
         <normaloff>:/plugins/swdeimport/documentation.png</normaloff>:/plugins/swdeimport/documentation.png</iconset>
       </attribute>
       <attribute name="title">
@@ -1055,7 +1032,7 @@
           <string>Zamknij</string>
          </property>
          <property name="icon">
-          <iconset resource="../../swdeImport/swdeImport/resources.qrc">
+          <iconset resource="resources.qrc">
            <normaloff>:/plugins/swdeimport/application-exit.png</normaloff>:/plugins/swdeimport/application-exit.png</iconset>
          </property>
         </widget>
@@ -1067,8 +1044,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="../../swdeDzeInfo/resources.qrc"/>
-  <include location="../../swdeImport/swdeImport/resources.qrc"/>
+  <include location="resources.qrc"/>
  </resources>
  <connections>
   <connection>

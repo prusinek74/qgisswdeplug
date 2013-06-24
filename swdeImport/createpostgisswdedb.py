@@ -19,36 +19,24 @@
  *                                                                         *
  ***************************************************************************/
 """
-# Import the PyQt and QGIS libraries
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from qgis.core import *
-# Initialize Qt resources from file resources.py
-import resources_rc
-# Import the code for the dialog
-from swdeimportdialog import swdeImportDialog
 
 from rob_db_connection import RobDBBase
 from rob_db_connection import RobDBTable
-from datetime import datetime
-import time
-import unicodedata
-import pyproj
-import sys
 
 class CreatePostgisSwdeDb:
  
-    def __init__(self, host, db, template, postgisver,  user, admin, adminpswd):
+    def __init__(self, host, db, postgisver,  owner, admin, adminpswd):
         #print "connect w db = " + str(connect)
         self.host = host
         self.db = db
-        self.user = user
+        self.owner = owner
         self.adminpswd = adminpswd
         self.postgisver = postgisver
         self.template = template
 
-    def createDB(self):
-        pass
 
     def createSwdeTables(self):
+        pass
+
+    def createSwdeFunc(self):
         pass

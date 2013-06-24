@@ -30,6 +30,7 @@ from swdeimportdialog import swdeImportDialog
 
 from rob_db_connection import RobDBBase
 from rob_db_connection import RobDBTable
+from createpostgisswdedb import CreatePostgisSwdeDb
 from datetime import datetime
 import time
 import unicodedata
@@ -193,13 +194,22 @@ class swdeImport:
 
     def pbtnCreateSWDEDBClicked(self):
         sett = QSettings('erdeproj', 'SWDE_qgis_plugin')
-        self.dlg.ui.peditOutput.appendPlainText("pguser: " + sett.value('pguser', '', type=str))
-        self.dlg.ui.peditOutput.appendPlainText("pgbase: " + sett.value('pgbase', '', type=str))
-        self.dlg.ui.peditOutput.appendPlainText("pguserpswd: " + sett.value('pguserpswd', '', type=str))
-        self.dlg.ui.peditOutput.appendPlainText("pgadmin: " + sett.value('pgadmin', '', type=str))
-        self.dlg.ui.peditOutput.appendPlainText("pgadminpswd: " + sett.value('pgadminpswd','', type=str))
-        QMessageBox.warning(self.dlg, 'Ajmsory!!!',
-                            u"He, He - nie ma tak dobrze. Funkcja na razie istnieje tylko w bliżej niesprecyzowanych planach autora. Póki co przepis na stworzenie bazy znajduje się pod adresem:")
+        pguser =  sett.value('pguser', '', type=str)
+        pgserver =  sett.value('pgserver', '', type=str)
+        pgbase = sett.value('pgbase', '', type=str)
+        pguserpswd = sett.value('pguserpswd', '', type=str)
+        pgadmin = sett.value('pgadmin', '', type=str)
+        pgadminpswd = sett.value('pgadminpswd','', type=str)
+
+        template = self.dlg.ui.leditTemplate.text()
+        postgisver = ""
+        if self.dlg.ui.rdbtnPostgis15.isChecked():
+            postgisver = "1.5"
+        else:
+            postgisver = "2.0"
+
+        newdb = CreatePostgisSwdeDb(pgserver, pgbase, postgisver, pguser, pgadmin, pgadminpswd)
+        newdb.createSwdeTables()
 
     def tbtnWybierzSWDEFileClicked(self):
         self.swde_file = QFileDialog.getOpenFileName(self.dlg, 'Wybierz plik SWDE', '.')
