@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_swdedzesearch.ui'
 #
-# Created: Thu Jun 20 13:47:38 2013
+# Created: Mon Jul  1 10:27:20 2013
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -17,7 +17,7 @@ except AttributeError:
 class Ui_swdeDzeSearch(object):
     def setupUi(self, swdeDzeSearch):
         swdeDzeSearch.setObjectName(_fromUtf8("swdeDzeSearch"))
-        swdeDzeSearch.resize(436, 465)
+        swdeDzeSearch.resize(422, 478)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/plugins/swdedzesearch/icons/swde-plug-search-22.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         swdeDzeSearch.setWindowIcon(icon)
@@ -80,6 +80,11 @@ class Ui_swdeDzeSearch(object):
         self.tabvDZE.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
         self.tabvDZE.setObjectName(_fromUtf8("tabvDZE"))
         self.verticalLayout.addWidget(self.tabvDZE)
+        self.peditOut = QtGui.QPlainTextEdit(swdeDzeSearch)
+        self.peditOut.setMaximumSize(QtCore.QSize(16777215, 60))
+        self.peditOut.setReadOnly(True)
+        self.peditOut.setObjectName(_fromUtf8("peditOut"))
+        self.verticalLayout.addWidget(self.peditOut)
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)

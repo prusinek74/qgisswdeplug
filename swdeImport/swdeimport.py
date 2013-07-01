@@ -47,8 +47,11 @@ class swdeImport:
     pgbase = ""
     pguserpswd = ""
     pgserver = ""
+    pgport = ""
     pgadmin = ""
     pgadminpswd = ""
+    tmppath = ""
+    ogr2ogrpath = ""
     def __init__(self, iface):
         # Save reference to the QGIS interface
         self.iface = iface
@@ -83,8 +86,12 @@ class swdeImport:
         self.pgbase = sett.value('pgbase', '', type=str)
         self.pguserpswd = sett.value('pguserpswd', '', type=str)
         self.pgserver = sett.value('pgserver', '', type=str)
+        self.pgport = sett.value('pgport', '5432', type=str)
         self.pgadmin = sett.value('pgadmin', '', type=str)
         self.pgadminpswd = sett.value('pgadminpswd', '', type=str)
+        self.tmppath = sett.value('tmppath', '', type=str)
+        self.ogr2ogrpath = sett.value('ogr2ogrpath', '', type=str)
+
 
     def initGui(self):
         # Create action that will start plugin configuration
@@ -110,8 +117,6 @@ class swdeImport:
         self.dlg.ui.leditDBBaseName.setText(self.pgbase)
         self.dlg.ui.leditDBUser.setText(self.pguser)
         self.dlg.ui.leditDBPassword.setText(self.pguserpswd)
-        self.dlg.ui.leditAdminName.setText(self.pgadmin)
-        self.dlg.ui.leditAdminPswd.setText(self.pgadminpswd)
         #inicializacja tablicy items dla combobox z ukladami przestrzennymi
         self.cmb_pyproj4_items = {}
         try:
@@ -172,6 +177,8 @@ class swdeImport:
         QObject.connect(self.dlg.ui.pbtnImportuj,SIGNAL("clicked()"),self.pbtnImportujClicked)
         QObject.connect(self.dlg.ui.pbtnDBSaveSettings,SIGNAL("clicked()"),self.pbtnDBSaveSettingsClicked)
         QObject.connect(self.dlg.ui.pbtnCreateSWDEDB,SIGNAL("clicked()"),self.pbtnCreateSWDEDBClicked)
+        QObject.connect(self.dlg.ui.tbtnTmpFolder,SIGNAL("clicked()"),self.tbtnTmpFolderClicked)
+        QObject.connect(self.dlg.ui.tbtnOgr2ogrFile,SIGNAL("clicked()"),self.tbtnOgr2ogrFileClicked)
 
         #--------edits and labels
 
@@ -183,14 +190,25 @@ class swdeImport:
         self.pgbase = self.dlg.ui.leditDBBaseName.displayText()
         self.pguser = self.dlg.ui.leditDBUser.displayText()
         self.pguserpswd = self.dlg.ui.leditDBPassword.text()
-        self.pgadmin = self.dlg.ui.leditAdminName.displayText()
-        self.pgadminpswd = self.dlg.ui.leditAdminPswd.text()
+        self.pgport = self.dlg.ui.leditDBPort.text()
         sett.setValue('pguser', self.pguser)
         sett.setValue('pgbase', self.pgbase)
         sett.setValue('pguserpswd', self.pguserpswd)
         sett.setValue('pgserver', self.pgserver)
-        sett.setValue('pgadmin', self.pgadmin)
-        sett.setValue('pgadminpswd', self.pgadminpswd)
+        sett.setValue('pgport', self.pgport)
+
+    def tbtnTmpFolderClicked(self):
+        sett = QSettings('erdeproj', 'SWDE_qgis_plugin')
+        self.tmppath = QFileDialog.getExistingDirectory(self.dlg, u'Wybierz lokalizację folderu plików tymczasowych', '.', QFileDialog.ShowDirsOnly)
+        sett.setValue('tmppath', self.tmppath)
+        self.dlg.ui.leditTmpFolder.setText(self.tmppath)
+
+    def tbtnOgr2ogrFileClicked(self):
+        sett = QSettings('erdeproj', 'SWDE_qgis_plugin')
+        self.ogr2ogrfile = QFileDialog.getOpenFileName(self.dlg, u'Wybierz lokalizację pliku ogr2ogr.exe (systemy windows)', '.')
+        sett.setValue('ogr2ogrfile', self.ogr2ogrfile)
+        self.dlg.ui.leditOgr2ogrFile.setText(self.ogr2ogrfile)
+
 
     def pbtnCreateSWDEDBClicked(self):
         sett = QSettings('erdeproj', 'SWDE_qgis_plugin')
@@ -198,17 +216,15 @@ class swdeImport:
         pgserver =  sett.value('pgserver', '', type=str)
         pgbase = sett.value('pgbase', '', type=str)
         pguserpswd = sett.value('pguserpswd', '', type=str)
-        pgadmin = sett.value('pgadmin', '', type=str)
-        pgadminpswd = sett.value('pgadminpswd','', type=str)
-
-        template = self.dlg.ui.leditTemplate.text()
+        pgowner = self.dlg.ui.leditOwner.text()
+        #chwilowo zmienna postgisver nie ma specjalnego znaczenia
         postgisver = ""
         if self.dlg.ui.rdbtnPostgis15.isChecked():
             postgisver = "1.5"
         else:
             postgisver = "2.0"
 
-        newdb = CreatePostgisSwdeDb(pgserver, pgbase, postgisver, pguser, pgadmin, pgadminpswd)
+        newdb = CreatePostgisSwdeDb(pgserver, pgbase, postgisver, pgowner, pguser, pguserpswd)
         newdb.createSwdeTables()
 
     def tbtnWybierzSWDEFileClicked(self):
@@ -399,6 +415,7 @@ class swdeImport:
     def pbtnImportujClicked(self):
 
         uni = lambda s: s if type(s) == unicode else unicode(s,'utf-8','replace')
+        srid = str(self.dlg.ui.leditSRIDImport.text())
         if self.f == 0 or self.f.closed:
            QMessageBox.warning(self.dlg, 'Uwaga!!!',
                         u"Przed rozpoczęciem importu musisz wczytać plik oraz dokonać jego analizy")
@@ -718,13 +735,19 @@ class swdeImport:
                                         if points[1] == 1:#newPoly
                                             #p1 = points[3]
                                             if points[0] == 1:#czyli pierwszy i byc moze jedyny polygon
-                                                p = u"POLYGON((" 
+                                                if srid == -1: #niezdefiniowany układ
+                                                    p = "POLYGON(("
+                                                else:
+                                                    p = "@GeomFromText(\'POLYGON(("
                                             else: #czyli ewentualne kolejne polygony
-                                                p = p + p1 + u"),("
+                                                p = p + p1 + "),("
                                             p1 = points[3]
-                                        p = p + points[3] + u',' 
-                                    p = p + p1 + u"))"
-                                    collist.append(u"geom")
+                                        p = p + points[3] + ','
+                                    if srid == -1:
+                                        p = p + p1 + "))"
+                                    else:
+                                        p = p + p1 + "))\'," + srid + ")"
+                                    collist.append("geom")
                                     valuelist.append(p)
 
                                 #dodanie kolumn tablicowych
@@ -826,7 +849,7 @@ class swdeImport:
             except IOError:
                 self.dlg.ui.peditOutput.appendPlainText("IOError: " +  time.strftime("%Y-%m-%d %H:%M:%S"))
 
-            print "przerobiono lini: " + str(linianr)
+            #print "przerobiono lini: " + str(linianr)
             self.dlg.ui.peditOutput.appendPlainText("przerobiono lini: " + str(linianr))
             self.dlg.ui.peditOutput.appendPlainText("Koniec programu: " +  time.strftime("%Y-%m-%d %H:%M:%S"))
 
@@ -930,49 +953,6 @@ def StringBetweenChar(string, char, nr):
     else:
         return -1
 
-def replacePlChars(s):
-    li = []
-    for c in s:
-        if c == '\xc4\x85':
-            li.append('a')
-        elif c == u'\u0104':
-            li.append('A')
-        elif c == u'\u0107':
-            li.append('c')
-        elif c == u'\u0106':
-            li.append('C')
-        elif c == u'\u0119':
-            li.append('e')
-        elif c == u'\u0118':
-            li.append('E')
-        elif c == u'\u0142':
-            li.append('l')
-        elif c == u'\u0141':
-            li.append('L')
-        elif c == u'\u0144':
-            li.append('n')
-        elif c == u'\u0143':
-            li.append('N')
-        elif c == u'\xf3':
-            li.append('o')
-        elif c == u'\xd3':
-            li.append('O')
-        elif c == u'\u015b':
-            li.append('s')
-        elif c == u'\u015a':
-            li.append('S')
-        elif c == u'\u017c':
-            li.append('z')
-        elif c == u'\u017b':
-            li.append('Z')
-        elif c == u'\u017a':
-            li.append('z')
-        elif c == u'\u0179':
-            li.append('Z')
-        else:
-            li.append(c)
-
-    return ''.join(li)
 
 
 

@@ -32,6 +32,7 @@ import resources_rc
 from swdedzesearchdialog import swdeDzeSearchDialog
 
 import subprocess, os,  sys
+import glob
 
 class swdeDzeSearch:
     pguser =''
@@ -40,7 +41,9 @@ class swdeDzeSearch:
     pgserver = ''
     pgadmin = ''
     pgadminpswd = ''
+    pgport = ''
     postgisQueryTmpPath = ''
+    ogr2ogrfile = ''
     id_vLayer = ''
 
     def __init__(self, iface):
@@ -111,6 +114,11 @@ class swdeDzeSearch:
         self.pgbase = sett.value('pgbase', '', type=str)
         self.pguserpswd = sett.value('pguserpswd', '', type=str)
         self.pgserver = sett.value('pgserver', '', type=str)
+        self.pgport = sett.value('pgport', '5432', type=str)
+        #katalog tymczasowy
+        self.postgisQueryTmpPath = sett.value('tmppath', self.tmpPath, type=str)
+        self.ogr2ogrfile = sett.value('ogr2ogrfile', 'ogr2ogr', type=str)
+
         db = QSqlDatabase.addDatabase("QPSQL")
         db.setHostName(self.pgserver)
         db.setDatabaseName(self.pgbase)
@@ -172,7 +180,7 @@ class swdeDzeSearch:
 
     def pbtnLokalizujClicked(self):
         select = self.dlg.ui.tabvDZE.selectionModel()
-        sqlstr = "select * from g5dze where "
+        sqlstr = "select g5idd, nr, geom from g5dze where "
         wherestr = ""
         for sel in select.selectedRows():
             uid = sel.data(Qt.DisplayRole).toString()
@@ -193,9 +201,10 @@ class swdeDzeSearch:
 #@version 1.0
 #@todo
     def showVLayer(self, query):
-        QApplication.setOverrideCursor(Qt.WaitCursor)
-        self.postgisQueryTmpPath = QDir.tempPath()
-        print self.postgisQueryTmpPath
+        sett = QSettings('erdeproj', 'SWDE_qgis_plugin')
+        self.id_vLayer = sett.value('id_vLayer', '', type=str)
+        if len(self.id_vLayer) > 0:
+            QgsMapLayerRegistry.instance().removeMapLayer(self.id_vLayer)
         tmpLayerDef = self.createShapeFileName(self.postgisQueryTmpPath)
         file = tmpLayerDef[0]
         layerName = tmpLayerDef[1]
@@ -204,7 +213,7 @@ class swdeDzeSearch:
         dbName = self.pgbase
         dbUser = self.pguser
         dbHost = self.pgserver
-        dbPort = '5432' #TODO ustawić w ustawieniach sett rowniez port
+        dbPort = self.pgport
         dbPasswd = self.pguserpswd
         query = query.replace('"','\\"')
 
@@ -220,9 +229,11 @@ class swdeDzeSearch:
             cmdPasswd = "-P "+dbPasswd
      
 
-        osCmd = unicode("pgsql2shp -f \""+str(file)+"\" "+cmdHost+" "+cmdUser+" -p "+str(dbPort)+" "+cmdPasswd+" "+str(dbName)+" \""+query+"\"", 'latin1')
+        osCmd = unicode(self.ogr2ogrfile + ' -f "ESRI Shapefile" ' + '"' + str(file) + '"' + ' PG:"host=' + dbHost+ ' port=' + dbPort +  ' user=' + dbUser + ' dbname=' + dbName + ' password=' + dbPasswd + ' " -sql ' + '"' +query+'"', 'utf-8')
 #     qmessageBox.information(None,'',osCmd)
-        proc = subprocess.Popen(osCmd.encode('latin1'),
+        self.dlg.ui.peditOut.appendPlainText( osCmd )
+        self.dlg.ui.peditOut.clear()
+        proc = subprocess.Popen(osCmd.encode('utf-8'),
                            shell=True,
                            stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
@@ -232,8 +243,6 @@ class swdeDzeSearch:
         #self.dlg.txtOutput.setText(stdout_value+stderr_value)
         #usunięcie starej mapy    
         uri = file
-        sett = QSettings('erdeproj', 'SWDE_qgis_plugin')
-        self.id_vLayer = sett.value('id_vLayer', '', type=str)
         if len(self.id_vLayer) > 0:
             QgsMapLayerRegistry.instance().removeMapLayer(self.id_vLayer)
 
@@ -254,8 +263,6 @@ class swdeDzeSearch:
         except:
             QgsMapLayerRegistry.instance().addMapLayers([vLayer])
          
-        QApplication.restoreOverrideCursor()
-        QApplication.setOverrideCursor(Qt.ArrowCursor)  
         pass
     
 #@brief define the temporary shape file name
@@ -267,8 +274,13 @@ class swdeDzeSearch:
 #@todo
     def createShapeFileName(self, myPath):
         myTempShape = str(myPath) + "/SwdeDzeSearchQuery.shp"
+        mask = str(myPath) + "/SwdeDzeSearchQuery*"
         myTempLayer = "SwdeDzeSearchQuery" 
-     
+        
+        filelist = glob.glob(mask)
+        for f in filelist:
+            os.remove(f)
+        #usunięcie plików 
         #while os.path.isfile(unicode(myTempShape,'latin1')):
         #    myTempShape = str(myPath) + "querytmp" + str(i) + ".shp"
         #    myTempLayer = "querytmp" + str(i)

@@ -8,9 +8,9 @@ class RobDBBase():
     db = ""
     user = ""
     password = ""
-    cur = "" #None - wyrzuca na windowsach błędy np self.conn = psycopg2.connect(...)
+    cur = 0 #None - wyrzuca na windowsach błędy np self.conn = psycopg2.connect(...)
             # object type None nie posiada atrybutu connect , czy jakoś tak:
-    conn = "" # j/w
+    conn = 0 # j/w
     rows = []
     row_count = 0
 
@@ -41,6 +41,7 @@ class RobDBBase():
         self.conn.rollback()
 
     def executeSQL(self, SQLstr):# TODO sprawdzic co bedzie jak sql bedzie inne niz select - sprawdzone - ProgrammingError: no results to fetch
+        print SQLstr
         self.cur.execute(SQLstr)
         #zeby uniknac 'ProgrammingError: no results to fetch' przy pytaniach innych niz select nalezy sprawdzic jaki jest typ zapytania
         if SQLstr.strip()[0:6].upper() == 'SELECT':
@@ -232,14 +233,20 @@ class RobDBTable():
                 #print "array = "+ str(array) + " " + insert_values_list[i][0:4]
                 if i == 0:
                     if array == 1:
-                        sqlStr = sqlStr  + insert_values_list[i] 
+                        sqlStr = sqlStr  + insert_values_list[i]
                     else:
-                        sqlStr = sqlStr + "'" + insert_values_list[i] + "'"
+                        if insert_values_list[i][0:1] == "@":
+                            sqlStr = sqlStr + str.lstrip(insert_values_list[i],'@')
+                        else:
+                            sqlStr = sqlStr + "'" + insert_values_list[i] + "'"
                 else:
                     if array == 1:
                         sqlStr = sqlStr + ", " + insert_values_list[i] 
                     else:
-                        sqlStr = sqlStr + ", '" + insert_values_list[i] + "'"
+                        if insert_values_list[i][0:1] == "@":
+                            sqlStr = sqlStr + ", " + str.lstrip(insert_values_list[i],'@')
+                        else:
+                            sqlStr = sqlStr + ", '" + insert_values_list[i] + "'"
 
         sqlStr = sqlStr + ")"
         #print "sqlStr = ", sqlStr
