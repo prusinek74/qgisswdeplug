@@ -211,21 +211,23 @@ class swdeImport:
 
 
     def pbtnCreateSWDEDBClicked(self):
-        sett = QSettings('erdeproj', 'SWDE_qgis_plugin')
-        pguser =  sett.value('pguser', '', type=str)
-        pgserver =  sett.value('pgserver', '', type=str)
-        pgbase = sett.value('pgbase', '', type=str)
-        pguserpswd = sett.value('pguserpswd', '', type=str)
-        pgowner = self.dlg.ui.leditOwner.text()
-        #chwilowo zmienna postgisver nie ma specjalnego znaczenia
-        postgisver = ""
-        if self.dlg.ui.rdbtnPostgis15.isChecked():
-            postgisver = "1.5"
-        else:
-            postgisver = "2.0"
+        #do czasu calkowitego rozwiazania problemu, funkcja zostaje nieaktywna
+        pass
+        #sett = QSettings('erdeproj', 'SWDE_qgis_plugin')
+        #pguser =  sett.value('pguser', '', type=str)
+        #pgserver =  sett.value('pgserver', '', type=str)
+        #pgbase = sett.value('pgbase', '', type=str)
+        #pguserpswd = sett.value('pguserpswd', '', type=str)
+        #pgowner = self.dlg.ui.leditOwner.text()
+        ##chwilowo zmienna postgisver nie ma specjalnego znaczenia
+        #postgisver = ""
+        #if self.dlg.ui.rdbtnPostgis15.isChecked():
+        #    postgisver = "1.5"
+        #else:
+        #    postgisver = "2.0"
 
-        newdb = CreatePostgisSwdeDb(pgserver, pgbase, postgisver, pgowner, pguser, pguserpswd)
-        newdb.createSwdeTables()
+        #newdb = CreatePostgisSwdeDb(pgserver, pgbase, postgisver, pgowner, pguser, pguserpswd)
+        #newdb.createSwdeTables()
 
     def tbtnWybierzSWDEFileClicked(self):
         self.swde_file = QFileDialog.getOpenFileName(self.dlg, 'Wybierz plik SWDE', '.')
@@ -738,7 +740,7 @@ class swdeImport:
                                                 if srid == -1: #niezdefiniowany układ
                                                     p = "POLYGON(("
                                                 else:
-                                                    p = "@GeomFromText(\'POLYGON(("
+                                                    p = "@ST_GeomFromText(\'POLYGON(("
                                             else: #czyli ewentualne kolejne polygony
                                                 p = p + p1 + "),("
                                             p1 = points[3]

@@ -12,7 +12,7 @@
 name=swde_dze_info
 qgisMinimumVersion=1.8
 description=Wyświetla okno z informacją o wybranej działce ewidencyjnej z tabeli g5dze postgresowej bazy danych z zaimportowanymi danymi z plików swde
-version=0.1
+version=0.1.20130701
 author=Robert Dorna - robbur
 email=robert.dorna@wp.eu
 

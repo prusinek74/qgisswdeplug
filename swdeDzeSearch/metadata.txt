@@ -12,7 +12,7 @@
 name=swdeDzeSearch
 qgisMinimumVersion=1.8
 description=Proste wyszukiwanie zbioru działek ewidencyjnych
-version=0.1
+version=0.1.20130701
 author=Robert Dorna
 email=robert.dorna@wp.eu
 

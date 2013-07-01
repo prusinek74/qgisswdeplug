@@ -12,7 +12,7 @@
 name=swde_import
 qgisMinimumVersion=1.8
 description=wtyczka umożliwa import danych z plików swde do bazy postgis
-version=0.1
+version=0.1.20130701
 author=Robert Dorna - robbur
 email=robert.dorna@wp.eu
 

@@ -8,9 +8,10 @@ class RobDBBase():
     db = ""
     user = ""
     password = ""
-    cur = 0 #None - wyrzuca na windowsach błędy np self.conn = psycopg2.connect(...)
+    #cur = 0 #None - wyrzuca na windowsach błędy np self.conn = psycopg2.connect(...)
             # object type None nie posiada atrybutu connect , czy jakoś tak:
-    conn = 0 # j/w
+    #conn = 0 # j/w
+    #ostatecznie trzeba było obie linie zakomentować z uwagi na błąd opisany dwie linie temu - pojawiał się w trakcie pracy wtyczki swdeDzeInfo
     rows = []
     row_count = 0
 
@@ -236,7 +237,10 @@ class RobDBTable():
                         sqlStr = sqlStr  + insert_values_list[i]
                     else:
                         if insert_values_list[i][0:1] == "@":
-                            sqlStr = sqlStr + str.lstrip(insert_values_list[i],'@')
+                            sqlStr = sqlStr + str.lstrip(str(insert_values_list[i]),'@')
+                            #jedna z dziwniejszych spraw - bez tego "str" w str(insert....)
+                            #wywala sie - ale tylko w przypadku importu testowego dla g5jew i g5obr  (dla g5dze nie)
+                            #mimo, ze pozostale rodzaje importu przechodza bez zastrzezen. błąd: lstrip 
                         else:
                             sqlStr = sqlStr + "'" + insert_values_list[i] + "'"
                 else:
@@ -244,7 +248,7 @@ class RobDBTable():
                         sqlStr = sqlStr + ", " + insert_values_list[i] 
                     else:
                         if insert_values_list[i][0:1] == "@":
-                            sqlStr = sqlStr + ", " + str.lstrip(insert_values_list[i],'@')
+                            sqlStr = sqlStr + ", " + str.lstrip(str(insert_values_list[i]),'@')
                         else:
                             sqlStr = sqlStr + ", '" + insert_values_list[i] + "'"
 
